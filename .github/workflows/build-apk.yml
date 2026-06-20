@@ -1,0 +1,65 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Restore debug keystore
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          mkdir -p $HOME/.bbs-keys
+          echo "$DEBUG_KEYSTORE_B64" | base64 -d > $HOME/.bbs-keys/bbs-debug.keystore
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build debug APK
+        env:
+          BBS_KEYSTORE_PATH: /home/runner/.bbs-keys/bbs-debug.keystore
+          BBS_KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+          BBS_KEY_ALIAS: ${{ secrets.DEBUG_KEY_ALIAS }}
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK (artifact CI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbs-groove-android-debug
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Rename APK for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/*.apk \
+            "release/bbs-groove-android-${GITHUB_REF_NAME}.apk"
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.apk
+          generate_release_notes: false
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

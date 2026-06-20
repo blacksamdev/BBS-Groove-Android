@@ -43,9 +43,9 @@ android {
             def ksFile = file(ksPath)
             if (ksFile.exists()) {
                 storeFile ksFile
-                storePassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbsgroove"
+                storePassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbspopcorn"
                 keyAlias System.getenv("BBS_KEY_ALIAS") ?: "bbsdebug"
-                keyPassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbsgroove"
+                keyPassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbspopcorn"
             }
         }
     }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BBS Groove</string>
+    <string name="hint_url">URL Spotify / Deezer  ou  recherche…</string>
+    <string name="load">Charger</string>
+</resources>

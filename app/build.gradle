@@ -1,0 +1,111 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'io.github.blacksamdev.groove'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "io.github.blacksamdev.groove"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+
+        ndk {
+            // Architectures supportées — arm64-v8a couvre 95%+ des devices Android modernes
+            abiFilters "arm64-v8a", "x86_64"
+        }
+
+        python {
+            // Version Python embarquée via Chaquopy
+            version "3.11"
+            pip {
+                // Résolution Spotify (mode requests, sans Selenium) — pur Python
+                install "spotifyscraper"
+                // Extraction du flux audio YouTube
+                install "yt-dlp"
+            }
+        }
+    }
+
+    signingConfigs {
+        // Keystore debug fixe : signature identique entre tous les builds
+        // (local et CI) → mises à jour installables sans désinstaller.
+        // En CI : le keystore est restauré depuis les secrets GitHub.
+        // En local : place le keystore dans ~/.bbs-keys/bbs-debug.keystore
+        bbsDebug {
+            def ksPath = System.getenv("BBS_KEYSTORE_PATH")
+                ?: "${System.getProperty('user.home')}/.bbs-keys/bbs-debug.keystore"
+            def ksFile = file(ksPath)
+            if (ksFile.exists()) {
+                storeFile ksFile
+                storePassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbsgroove"
+                keyAlias System.getenv("BBS_KEY_ALIAS") ?: "bbsdebug"
+                keyPassword System.getenv("BBS_KEYSTORE_PASSWORD") ?: "bbsgroove"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            def ksPath = System.getenv("BBS_KEYSTORE_PATH")
+                ?: "${System.getProperty('user.home')}/.bbs-keys/bbs-debug.keystore"
+            if (file(ksPath).exists()) {
+                signingConfig signingConfigs.bbsDebug
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    // ─── Media3 / ExoPlayer ───────────────────────────────────────────
+    def media3_version = "1.3.1"
+    implementation "androidx.media3:media3-exoplayer:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-dash:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-session:$media3_version"
+    implementation "androidx.media3:media3-cast:$media3_version"
+
+    // ─── Chromecast / Cast SDK ────────────────────────────────────────
+    implementation 'com.google.android.gms:play-services-cast-framework:21.4.0'
+
+    // ─── AndroidX core ────────────────────────────────────────────────
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.3'
+
+    // ─── Coroutines ───────────────────────────────────────────────────
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+
+    // ─── Tests ────────────────────────────────────────────────────────
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BBSGroove" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="android:colorBackground">@color/bg_main</item>
+        <item name="android:windowBackground">@color/bg_main</item>
+        <item name="colorSurface">@color/bg_panel</item>
+        <item name="android:statusBarColor">@color/bg_panel</item>
+    </style>
+</resources>

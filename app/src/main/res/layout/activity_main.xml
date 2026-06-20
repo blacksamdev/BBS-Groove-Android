@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main">
+
+    <!-- ── Topbar : logo + Cast ─────────────────────────────────── -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/bg_panel"
+        app:titleTextColor="@color/text_pri">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BBS grOOve"
+            android:textColor="@color/text_pri"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- ── Barre URL / recherche ────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/bg_panel"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/urlInput"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="10dp"
+            android:textColor="@color/text_pri"
+            android:textColorHint="@color/text_sec"
+            android:textSize="13sp"
+            android:imeOptions="actionGo"
+            android:inputType="text"
+            android:hint="@string/hint_url" />
+
+        <Button
+            android:id="@+id/btnLoad"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_btn"
+            android:text="▶"
+            android:textColor="@color/text_pri"
+            android:textSize="16sp"
+            android:minWidth="48dp" />
+    </LinearLayout>
+
+    <!-- ── Panneau titre courant ────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="@color/bg_panel"
+        android:layout_margin="8dp">
+
+        <ImageView
+            android:id="@+id/artwork"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@drawable/artwork_placeholder"
+            android:scaleType="centerCrop"
+            android:contentDescription="artwork" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="14dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/trackTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="—"
+                android:textColor="@color/text_pri"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/trackArtist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/accent"
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/trackAlbum"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/text_sec"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/accent"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ── File de lecture ──────────────────────────────────────── -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="  Lecture"
+        android:textColor="@color/text_sec"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:paddingVertical="8dp"
+        android:paddingStart="12dp"
+        android:background="@color/bg_panel" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/queueList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/bg_panel"
+        android:scrollbars="vertical" />
+
+    <!-- ── Player bar ───────────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/bg_panel"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp">
+
+        <!-- Contrôles -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <TextView android:id="@+id/btnShuffle"
+                android:layout_width="44dp" android:layout_height="40dp"
+                android:text="⇄" android:gravity="center"
+                android:textColor="@color/accent" android:textSize="18sp" />
+
+            <TextView android:id="@+id/btnPrev"
+                android:layout_width="44dp" android:layout_height="40dp"
+                android:text="◀◀" android:gravity="center"
+                android:textColor="@color/text_pri" android:textSize="14sp" />
+
+            <TextView android:id="@+id/btnPlay"
+                android:layout_width="56dp" android:layout_height="40dp"
+                android:text="▶" android:gravity="center"
+                android:textColor="@color/text_pri" android:textSize="20sp" />
+
+            <TextView android:id="@+id/btnNext"
+                android:layout_width="44dp" android:layout_height="40dp"
+                android:text="▶▶" android:gravity="center"
+                android:textColor="@color/text_pri" android:textSize="14sp" />
+
+            <TextView android:id="@+id/btnRepeat"
+                android:layout_width="44dp" android:layout_height="40dp"
+                android:text="↺" android:gravity="center"
+                android:textColor="@color/accent" android:textSize="18sp" />
+        </LinearLayout>
+
+        <!-- Progression -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView android:id="@+id/timeCur"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
+
+            <SeekBar android:id="@+id/seekBar"
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:max="1000"
+                android:progressTint="@color/accent"
+                android:thumbTint="@color/text_pri" />
+
+            <TextView android:id="@+id/timeDur"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Volume -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="🔊" android:textColor="@color/text_sec" android:textSize="12sp" />
+
+            <SeekBar android:id="@+id/volumeBar"
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:max="100" android:progress="100"
+                android:progressTint="@color/accent"
+                android:thumbTint="@color/text_pri" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

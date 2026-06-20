@@ -40,22 +40,6 @@ lyrics synchronisées, autoplay Last.fm, mode gaming flottant, playlists perso.
 | UI            | Kotlin + Material3                   |
 | CI            | GitHub Actions → APK                 |
 
-## Build
-
-```
-./gradlew assembleDebug
-```
-
-APK généré dans `app/build/outputs/apk/debug/`. Place ton keystore debug dans
-`~/.bbs-keys/bbs-debug.keystore` pour des mises à jour installables sans
-désinstallation (en CI : restauré depuis les secrets GitHub).
-
-## Prérequis build
-
-- JDK 21
-- Android SDK (compileSdk 34, minSdk 26)
-- Gradle 8.7 (wrapper inclus)
-
 ---
 
 GPL-3.0 — développé par blacksamdev — en hommage à Samuel Bellamy 🏴‍☠️, le Prince des Pirates, capitaine du Whydah.

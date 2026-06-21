@@ -3,6 +3,8 @@ package io.github.blacksamdev.groove.player
 import android.content.Context
 import androidx.media3.cast.CastPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -26,8 +28,17 @@ class GroovePlayer(
         .setUserAgent("Mozilla/5.0 (Linux; Android) BBSGroove/1.0")
         .setAllowCrossProtocolRedirects(true)
 
+    private val audioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .build()
+
     private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
         .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+        // Rattache la lecture au flux MUSIC du système : les boutons physiques
+        // du téléphone contrôlent le volume nativement. handleAudioFocus=true
+        // gère aussi les interruptions (appel, autre app média).
+        .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
         .build()
     private val castPlayer: CastPlayer? =
         castContext?.let { CastPlayer(it) }
@@ -92,7 +103,6 @@ class GroovePlayer(
     val duration: Long get() = current.duration.coerceAtLeast(0)
 
     fun seekTo(ms: Long) = current.seekTo(ms)
-    fun setVolume(v: Float) { exoPlayer.volume = v.coerceIn(0f, 1f) }
     fun stop() { current.stop() }
 
     fun release() {

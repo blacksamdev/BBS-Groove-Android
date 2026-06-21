@@ -1,6 +1,7 @@
 package io.github.blacksamdev.groove.ui
 
 import android.graphics.BitmapFactory
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -41,6 +42,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Les boutons volume physiques pilotent le flux MUSIC même app au premier plan
+        volumeControlStream = AudioManager.STREAM_MUSIC
 
         castContext = try { CastContext.getSharedInstance(this) } catch (e: Exception) { null }
 
@@ -87,14 +91,6 @@ class MainActivity : AppCompatActivity() {
                 val dur = player.duration
                 if (dur > 0) player.seekTo(dur * sb.progress / 1000)
             }
-        })
-        binding.volumeBar.setOnSeekBarChangeListener(object :
-            android.widget.SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: android.widget.SeekBar, p: Int, fromUser: Boolean) {
-                player.setVolume(p / 100f)
-            }
-            override fun onStartTrackingTouch(sb: android.widget.SeekBar) {}
-            override fun onStopTrackingTouch(sb: android.widget.SeekBar) {}
         })
     }
 

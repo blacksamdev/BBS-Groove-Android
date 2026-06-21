@@ -209,22 +209,5 @@
                 android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- Volume -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="🔊" android:textColor="@color/text_sec" android:textSize="12sp" />
-
-            <SeekBar android:id="@+id/volumeBar"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:max="100" android:progress="100"
-                android:progressTint="@color/accent"
-                android:thumbTint="@color/text_pri" />
-        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

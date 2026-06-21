@@ -106,6 +106,9 @@ dependencies {
     // ─── Coroutines ───────────────────────────────────────────────────
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 
+    // Guava : ListenableFuture pour MediaController
+    implementation 'com.google.guava:guava:33.0.0-android'
+
     // ─── Tests ────────────────────────────────────────────────────────
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

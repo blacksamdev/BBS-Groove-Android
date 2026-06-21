@@ -35,11 +35,15 @@ object PythonBridge {
         pyListToTracks(result)
     }
 
-    /** Résout (artist,title,durationMs) -> URL de stream audio fraîche. */
+    /** Résout une Track -> URL de stream audio directe (jouable par ExoPlayer). */
     suspend fun resolveStream(track: Track): String? = withContext(Dispatchers.IO) {
-        val r = resolverMod.callAttr(
-            "resolve", track.artist, track.title, track.durationMs
-        )
+        // Si on a déjà une URL de page YouTube (issue de search), extraire son flux
+        // directement : plus fiable et plus rapide qu'une nouvelle recherche.
+        val r = if (track.webpageUrl.isNotEmpty()) {
+            resolverMod.callAttr("resolve_from_url", track.webpageUrl)
+        } else {
+            resolverMod.callAttr("resolve", track.artist, track.title, track.durationMs)
+        }
         r?.toString()
     }
 

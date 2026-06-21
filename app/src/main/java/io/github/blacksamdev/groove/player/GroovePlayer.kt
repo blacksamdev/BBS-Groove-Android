@@ -5,7 +5,9 @@ import androidx.media3.cast.CastPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.google.android.gms.cast.framework.CastContext
 import io.github.blacksamdev.groove.model.Track
 
@@ -20,7 +22,13 @@ class GroovePlayer(
     private val onTrackEnded: () -> Unit,
 ) {
 
-    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val httpFactory = DefaultHttpDataSource.Factory()
+        .setUserAgent("Mozilla/5.0 (Linux; Android) BBSGroove/1.0")
+        .setAllowCrossProtocolRedirects(true)
+
+    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+        .build()
     private val castPlayer: CastPlayer? =
         castContext?.let { CastPlayer(it) }
 

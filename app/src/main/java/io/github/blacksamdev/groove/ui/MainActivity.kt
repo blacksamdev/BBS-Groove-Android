@@ -2,7 +2,9 @@ package io.github.blacksamdev.groove.ui
 
 import android.content.ComponentName
 import android.graphics.BitmapFactory
+import android.app.AlertDialog
 import android.media.AudioManager
+import android.widget.EditText
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -18,6 +20,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.databinding.ActivityMainBinding
+import io.github.blacksamdev.groove.model.Playlist
+import io.github.blacksamdev.groove.model.PlaylistStore
 import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.player.PlaybackController
 import io.github.blacksamdev.groove.player.PlaybackService
@@ -40,6 +44,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var adapter: TrackAdapter
+    private lateinit var playlistAdapter: PlaylistAdapter
+    private lateinit var store: PlaylistStore
+    private var openPlaylist: Playlist? = null
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
@@ -95,10 +102,103 @@ class MainActivity : AppCompatActivity() {
         adapter = TrackAdapter { index -> PlaybackController.playAt(index) }
         binding.queueList.layoutManager = LinearLayoutManager(this)
         binding.queueList.adapter = adapter
+
+        store = PlaylistStore(this)
+        playlistAdapter = PlaylistAdapter(
+            onOpen   = { pl -> openPlaylistTracks(pl) },
+            onPlay   = { pl -> if (pl.tracks.isNotEmpty()) { adapter.submit(pl.tracks); PlaybackController.load(pl.tracks); showPlayback() } },
+            onDelete = { pl -> store.deletePlaylist(pl.name); refreshPlaylists() },
+        )
+        binding.playlistsList.layoutManager = LinearLayoutManager(this)
+        binding.playlistsList.adapter = playlistAdapter
+    }
+
+    // ── Bascule panneaux lecture <-> playlists ────────────────────────
+
+    private fun showPlaylists() {
+        openPlaylist = null
+        binding.playbackPanel.visibility = android.view.View.GONE
+        binding.playlistsPanel.visibility = android.view.View.VISIBLE
+        binding.playlistsTitle.text = "Mes playlists grOOve"
+        binding.playlistsList.adapter = playlistAdapter
+        refreshPlaylists()
+    }
+
+    private fun showPlayback() {
+        binding.playlistsPanel.visibility = android.view.View.GONE
+        binding.playbackPanel.visibility = android.view.View.VISIBLE
+    }
+
+    private fun refreshPlaylists() {
+        playlistAdapter.submit(store.load())
+    }
+
+    /** Affiche les titres d'une playlist dans la liste playlists (réutilise TrackAdapter). */
+    private fun openPlaylistTracks(pl: Playlist) {
+        openPlaylist = pl
+        binding.playlistsTitle.text = pl.name
+        val ta = TrackAdapter { index ->
+            adapter.submit(pl.tracks)
+            PlaybackController.load(pl.tracks)
+            PlaybackController.playAt(index)
+            showPlayback()
+        }
+        ta.submit(pl.tracks)
+        binding.playlistsList.adapter = ta
+    }
+
+    private fun promptNewPlaylist() {
+        val input = EditText(this).apply { hint = "Nom de la playlist" }
+        AlertDialog.Builder(this)
+            .setTitle("Nouvelle playlist")
+            .setView(input)
+            .setPositiveButton("Créer") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) { store.create(name); refreshPlaylists() }
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    /** Importe la file courante dans une playlist (nouvelle ou existante). */
+    private fun promptImport() {
+        val tracks = PlaybackController.queue.tracks.toList()
+        if (tracks.isEmpty()) { setStatus("Rien à importer"); return }
+        val existing = store.load()
+        val names = existing.map { it.name }.toMutableList()
+        names.add(0, "➕ Nouvelle playlist…")
+        AlertDialog.Builder(this)
+            .setTitle("Importer ${tracks.size} titre(s) dans…")
+            .setItems(names.toTypedArray()) { _, which ->
+                if (which == 0) {
+                    val input = EditText(this).apply { hint = "Nom de la playlist" }
+                    AlertDialog.Builder(this)
+                        .setTitle("Nouvelle playlist")
+                        .setView(input)
+                        .setPositiveButton("Créer") { _, _ ->
+                            val name = input.text.toString().trim()
+                            if (name.isNotEmpty()) {
+                                store.addTracks(name, tracks)
+                                setStatus("Importé dans « $name »")
+                            }
+                        }
+                        .setNegativeButton("Annuler", null)
+                        .show()
+                } else {
+                    val name = existing[which - 1].name
+                    store.addTracks(name, tracks)
+                    setStatus("Importé dans « $name »")
+                }
+            }
+            .show()
     }
 
     private fun setupControls() {
         binding.btnLoad.setOnClickListener { loadInput() }
+        binding.btnPlaylists.setOnClickListener { showPlaylists() }
+        binding.btnImport.setOnClickListener { promptImport() }
+        binding.btnBack.setOnClickListener { if (openPlaylist != null) showPlaylists() else showPlayback() }
+        binding.btnNewPlaylist.setOnClickListener { promptNewPlaylist() }
         binding.urlInput.setOnEditorActionListener { _, _, _ -> loadInput(); true }
 
         binding.btnPlay.setOnClickListener { PlaybackController.togglePause() }

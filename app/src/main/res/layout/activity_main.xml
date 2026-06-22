@@ -23,7 +23,7 @@
             android:textStyle="bold" />
     </androidx.appcompat.widget.Toolbar>
 
-    <!-- ── Barre URL / recherche ────────────────────────────────── -->
+    <!-- ── Barre URL / recherche + accès playlists ──────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -57,6 +57,27 @@
             android:textColor="@color/text_pri"
             android:textSize="16sp"
             android:minWidth="48dp" />
+
+        <Button
+            android:id="@+id/btnImport"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn"
+            android:text="＋"
+            android:textColor="@color/accent"
+            android:textSize="18sp"
+            android:minWidth="44dp" />
+
+        <Button
+            android:id="@+id/btnPlaylists"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn"
+            android:text="📋"
+            android:textSize="14sp"
+            android:minWidth="44dp" />
     </LinearLayout>
 
     <!-- ── Panneau titre courant ────────────────────────────────── -->
@@ -125,25 +146,91 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ── File de lecture ──────────────────────────────────────── -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="  Lecture"
-        android:textColor="@color/text_sec"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:paddingVertical="8dp"
-        android:paddingStart="12dp"
-        android:background="@color/bg_panel" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/queueList"
+    <!-- ══ PANNEAU LECTURE (file) ═══════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/playbackPanel"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/bg_panel"
-        android:scrollbars="vertical" />
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="  Lecture"
+            android:textColor="@color/text_sec"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingVertical="8dp"
+            android:paddingStart="12dp"
+            android:background="@color/bg_panel" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/queueList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_panel"
+            android:scrollbars="vertical" />
+    </LinearLayout>
+
+    <!-- ══ PANNEAU PLAYLISTS (masqué par défaut) ═══════════════════ -->
+    <LinearLayout
+        android:id="@+id/playlistsPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- En-tête : retour + titre + nouvelle playlist -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@color/bg_panel"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="6dp">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_btn"
+                android:text="←"
+                android:textColor="@color/text_pri"
+                android:textSize="16sp"
+                android:minWidth="44dp" />
+
+            <TextView
+                android:id="@+id/playlistsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mes playlists grOOve"
+                android:textColor="@color/text_pri"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingStart="10dp" />
+
+            <Button
+                android:id="@+id/btnNewPlaylist"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_btn"
+                android:text="＋"
+                android:textColor="@color/accent"
+                android:textSize="18sp"
+                android:minWidth="44dp" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/playlistsList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_panel"
+            android:scrollbars="vertical" />
+    </LinearLayout>
 
     <!-- ── Player bar ───────────────────────────────────────────── -->
     <LinearLayout
@@ -154,7 +241,6 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp">
 
-        <!-- Contrôles -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -187,7 +273,6 @@
                 android:textColor="@color/accent" android:textSize="18sp" />
         </LinearLayout>
 
-        <!-- Progression -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -208,6 +293,5 @@
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
         </LinearLayout>
-
     </LinearLayout>
 </LinearLayout>

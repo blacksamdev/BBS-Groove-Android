@@ -207,12 +207,13 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnShuffle.setOnClickListener {
             val on = !PlaybackController.queue.shuffle
-            PlaybackController.queue.setShuffle(on)
+            PlaybackController.setShuffle(on)
             binding.btnShuffle.alpha = if (on) 1f else 0.4f
         }
         binding.btnRepeat.setOnClickListener {
-            PlaybackController.queue.repeat = !PlaybackController.queue.repeat
-            binding.btnRepeat.alpha = if (PlaybackController.queue.repeat) 1f else 0.4f
+            val rep = !PlaybackController.queue.repeat
+            PlaybackController.setRepeat(rep)
+            binding.btnRepeat.alpha = if (rep) 1f else 0.4f
         }
         binding.btnShuffle.alpha = if (PlaybackController.queue.shuffle) 1f else 0.4f
         binding.btnRepeat.alpha = if (PlaybackController.queue.repeat) 1f else 0.4f

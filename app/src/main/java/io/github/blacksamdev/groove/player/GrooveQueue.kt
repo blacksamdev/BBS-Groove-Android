@@ -67,6 +67,31 @@ class GrooveQueue {
         return currentTrack()
     }
 
+    // ── Helpers fenêtre glissante (sans muter l'état) ─────────────────
+
+    /** Index réel (dans tracks) du suivant selon l'ordre courant, ou null. */
+    fun peekNextIndex(): Int? {
+        if (tracks.isEmpty()) return null
+        if (orderPos + 1 >= order.size) return null
+        return order[orderPos + 1]
+    }
+
+    /** Index réel du précédent selon l'ordre courant, ou null. */
+    fun peekPrevIndex(): Int? {
+        if (tracks.isEmpty()) return null
+        if (orderPos - 1 < 0) return null
+        return order[orderPos - 1]
+    }
+
+    fun trackAt(index: Int): Track? = tracks.getOrNull(index)
+
+    /** Positionne sur un index réel sans renvoyer (resync depuis Media3). */
+    fun syncTo(index: Int) {
+        if (index !in tracks.indices) return
+        currentIndex = index
+        orderPos = order.indexOf(index).coerceAtLeast(0)
+    }
+
     fun isEmpty() = tracks.isEmpty()
     fun size() = tracks.size
 }

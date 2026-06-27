@@ -99,7 +99,11 @@ class MainActivity : AppCompatActivity() {
     // ── Liste ─────────────────────────────────────────────────────────
 
     private fun setupList() {
-        adapter = TrackAdapter { index -> PlaybackController.playAt(index) }
+        adapter = TrackAdapter(
+            mode = TrackAdapter.Mode.ADD,
+            onClick = { index -> PlaybackController.playAt(index) },
+            onAction = { index -> promptAddTrackToPlaylist(index) },
+        )
         binding.queueList.layoutManager = LinearLayoutManager(this)
         binding.queueList.adapter = adapter
 
@@ -137,12 +141,21 @@ class MainActivity : AppCompatActivity() {
     private fun openPlaylistTracks(pl: Playlist) {
         openPlaylist = pl
         binding.playlistsTitle.text = pl.name
-        val ta = TrackAdapter { index ->
-            adapter.submit(pl.tracks)
-            PlaybackController.load(pl.tracks)
-            PlaybackController.playAt(index)
-            showPlayback()
-        }
+        val ta = TrackAdapter(
+            mode = TrackAdapter.Mode.REMOVE,
+            onClick = { index ->
+                adapter.submit(pl.tracks)
+                PlaybackController.load(pl.tracks)
+                PlaybackController.playAt(index)
+                showPlayback()
+            },
+            onAction = { index ->
+                // Retrait immédiat du titre de cette playlist
+                store.removeTrack(pl.name, index)
+                pl.tracks.removeAt(index)
+                openPlaylistTracks(pl)   // recharge la vue de la playlist
+            },
+        )
         ta.submit(pl.tracks)
         binding.playlistsList.adapter = ta
     }
@@ -157,6 +170,38 @@ class MainActivity : AppCompatActivity() {
                 if (name.isNotEmpty()) { store.create(name); refreshPlaylists() }
             }
             .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    /** Ajoute un seul titre (de la file) à une playlist au choix. */
+    private fun promptAddTrackToPlaylist(index: Int) {
+        val track = PlaybackController.queue.tracks.getOrNull(index) ?: return
+        val existing = store.load()
+        val names = existing.map { it.name }.toMutableList()
+        names.add(0, "➕ Nouvelle playlist…")
+        AlertDialog.Builder(this)
+            .setTitle("Ajouter « ${track.title} » à…")
+            .setItems(names.toTypedArray()) { _, which ->
+                if (which == 0) {
+                    val input = EditText(this).apply { hint = "Nom de la playlist" }
+                    AlertDialog.Builder(this)
+                        .setTitle("Nouvelle playlist")
+                        .setView(input)
+                        .setPositiveButton("Créer") { _, _ ->
+                            val name = input.text.toString().trim()
+                            if (name.isNotEmpty()) {
+                                store.addTracks(name, listOf(track))
+                                setStatus("Ajouté à « $name »")
+                            }
+                        }
+                        .setNegativeButton("Annuler", null)
+                        .show()
+                } else {
+                    val name = existing[which - 1].name
+                    store.addTracks(name, listOf(track))
+                    setStatus("Ajouté à « $name »")
+                }
+            }
             .show()
     }
 

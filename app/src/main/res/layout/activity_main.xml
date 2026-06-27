@@ -64,7 +64,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/bg_btn"
-            android:text="＋"
+            android:text="+"
             android:textColor="@color/accent"
             android:textSize="18sp"
             android:minWidth="44dp" />
@@ -218,7 +218,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:background="@drawable/bg_btn"
-                android:text="＋"
+                android:text="+"
                 android:textColor="@color/accent"
                 android:textSize="18sp"
                 android:minWidth="44dp" />

@@ -9,13 +9,19 @@ import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.model.Track
 
 /**
- * Adapter de la file de lecture. Reproduit le format desktop :
- *   "  01.  Artiste  —  Titre"
- * Le titre courant est mis en évidence (couleur accent #1DB954).
+ * Adapter de liste de titres, utilisé dans deux contextes (mode) :
+ *   - ADD    : file de lecture -> bouton "+" pour ajouter le titre à une playlist
+ *   - REMOVE : playlist ouverte -> bouton "−" pour retirer le titre de la playlist
+ *
+ * Le titre courant (mode ADD seulement) est mis en évidence en accent.
  */
 class TrackAdapter(
+    private val mode: Mode = Mode.ADD,
     private val onClick: (Int) -> Unit,
+    private val onAction: (Int) -> Unit = {},
 ) : RecyclerView.Adapter<TrackAdapter.VH>() {
+
+    enum class Mode { ADD, REMOVE }
 
     private val items = mutableListOf<Track>()
     private var currentIndex = -1
@@ -43,15 +49,25 @@ class TrackAdapter(
         val t = items[position]
         val num = (position + 1).toString().padStart(2, '0')
         holder.line.text = "  $num.  ${t.artist}  —  ${t.title}"
+
         val accent = 0xFF1DB954.toInt()
         val white  = 0xFFFFFFFF.toInt()
-        holder.line.setTextColor(if (position == currentIndex) accent else white)
-        holder.itemView.setOnClickListener { onClick(position) }
+        holder.line.setTextColor(
+            if (mode == Mode.ADD && position == currentIndex) accent else white
+        )
+
+        // Bouton d'action selon le mode
+        holder.action.text = if (mode == Mode.ADD) "+" else "−"
+        holder.action.setTextColor(if (mode == Mode.ADD) accent else 0xFFFF5555.toInt())
+        holder.action.setOnClickListener { onAction(holder.bindingAdapterPosition) }
+
+        holder.line.setOnClickListener { onClick(holder.bindingAdapterPosition) }
     }
 
     override fun getItemCount() = items.size
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val line: TextView = view.findViewById(R.id.track_line)
+        val action: TextView = view.findViewById(R.id.track_action)
     }
 }

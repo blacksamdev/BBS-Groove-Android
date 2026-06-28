@@ -92,6 +92,19 @@ class GrooveQueue {
         orderPos = order.indexOf(index).coerceAtLeast(0)
     }
 
+    /**
+     * Étend l'ordre de lecture après ajout de `count` pistes en fin de `tracks`
+     * (autoplay). Les nouveaux indices sont ajoutés à la fin de l'ordre ;
+     * si shuffle est actif, ils sont mélangés entre eux puis appondus.
+     */
+    fun appendOrder(count: Int) {
+        if (count <= 0) return
+        val start = tracks.size - count
+        val newIdx = (start until tracks.size).toMutableList()
+        if (shuffle) newIdx.shuffle()
+        order.addAll(newIdx)
+    }
+
     fun isEmpty() = tracks.isEmpty()
     fun size() = tracks.size
 }

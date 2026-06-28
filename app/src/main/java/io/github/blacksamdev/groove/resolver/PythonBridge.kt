@@ -29,6 +29,15 @@ object PythonBridge {
         pyListToTracks(result)
     }
 
+    /** Suggestions de pistes similaires (autoplay). mode: youtube|lastfm|off. */
+    suspend fun suggest(mode: String, artist: String, title: String,
+                        apiKey: String = "", limit: Int = 15): List<Track> =
+        withContext(Dispatchers.IO) {
+            val mod = py.getModule("autoplay")
+            val result = mod.callAttr("suggest", mode, artist, title, apiKey, limit)
+            pyListToTracks(result)
+        }
+
     /** Recherche libre YouTube -> liste de Track. */
     suspend fun search(query: String, limit: Int = 15): List<Track> = withContext(Dispatchers.IO) {
         val result = resolverMod.callAttr("search", query, limit)

@@ -5,6 +5,10 @@ import android.graphics.BitmapFactory
 import android.app.AlertDialog
 import android.media.AudioManager
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.TextView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,6 +26,7 @@ import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.databinding.ActivityMainBinding
 import io.github.blacksamdev.groove.model.Playlist
 import io.github.blacksamdev.groove.model.PlaylistStore
+import io.github.blacksamdev.groove.model.SettingsStore
 import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.player.PlaybackController
 import io.github.blacksamdev.groove.player.PlaybackService
@@ -46,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: TrackAdapter
     private lateinit var playlistAdapter: PlaylistAdapter
     private lateinit var store: PlaylistStore
+    private lateinit var settings: SettingsStore
     private var openPlaylist: Playlist? = null
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -108,6 +114,7 @@ class MainActivity : AppCompatActivity() {
         binding.queueList.adapter = adapter
 
         store = PlaylistStore(this)
+        settings = SettingsStore(this)
         playlistAdapter = PlaylistAdapter(
             onOpen   = { pl -> openPlaylistTracks(pl) },
             onPlay   = { pl -> if (pl.tracks.isNotEmpty()) { adapter.submit(pl.tracks); PlaybackController.load(pl.tracks); showPlayback() } },
@@ -158,6 +165,66 @@ class MainActivity : AppCompatActivity() {
         )
         ta.submit(pl.tracks)
         binding.playlistsList.adapter = ta
+    }
+
+    /** Dialog Options : mode autoplay (off/youtube/lastfm) + clé Last.fm. */
+    private fun showOptions() {
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad, pad, pad)
+        }
+
+        val label = TextView(this).apply {
+            text = "Lecture automatique en fin de file"
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 14f
+        }
+        container.addView(label)
+
+        val group = RadioGroup(this)
+        val rbOff = RadioButton(this).apply { text = "Désactivé"; setTextColor(0xFFFFFFFF.toInt()) }
+        val rbYt  = RadioButton(this).apply { text = "YouTube (sans clé)"; setTextColor(0xFFFFFFFF.toInt()) }
+        val rbLfm = RadioButton(this).apply { text = "Last.fm (recommandations)"; setTextColor(0xFFFFFFFF.toInt()) }
+        group.addView(rbOff); group.addView(rbYt); group.addView(rbLfm)
+        when (settings.autoplayMode) {
+            "youtube" -> rbYt.isChecked = true
+            "lastfm"  -> rbLfm.isChecked = true
+            else      -> rbOff.isChecked = true
+        }
+        container.addView(group)
+
+        val keyInput = EditText(this).apply {
+            hint = "Clé API Last.fm"
+            setText(settings.lastfmApiKey)
+            setTextColor(0xFFFFFFFF.toInt())
+        }
+        container.addView(keyInput)
+
+        val link = TextView(this).apply {
+            text = "Obtenir une clé gratuite : last.fm/api"
+            setTextColor(0xFF1DB954.toInt())
+            textSize = 11f
+        }
+        container.addView(link)
+
+        AlertDialog.Builder(this)
+            .setTitle("Options")
+            .setView(container)
+            .setPositiveButton("Enregistrer") { _, _ ->
+                val mode = when (group.checkedRadioButtonId) {
+                    rbYt.id  -> "youtube"
+                    rbLfm.id -> "lastfm"
+                    else     -> "off"
+                }
+                settings.setAutoplayMode(mode)
+                settings.setLastfmApiKey(keyInput.text.toString().trim())
+                // Réinjecter dans le moteur de lecture immédiatement
+                PlaybackController.setAutoplayConfig(settings.autoplayMode, settings.lastfmApiKey)
+                setStatus("Options enregistrées")
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
     }
 
     private fun promptNewPlaylist() {
@@ -241,6 +308,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupControls() {
         binding.btnLoad.setOnClickListener { loadInput() }
         binding.btnPlaylists.setOnClickListener { showPlaylists() }
+        binding.btnOptions.setOnClickListener { showOptions() }
         binding.btnImport.setOnClickListener { promptImport() }
         binding.btnBack.setOnClickListener { if (openPlaylist != null) showPlaylists() else showPlayback() }
         binding.btnNewPlaylist.setOnClickListener { promptNewPlaylist() }

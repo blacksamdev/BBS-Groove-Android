@@ -48,6 +48,16 @@ object PlaybackController {
 
     private var initialized = false
 
+    // Réglages autoplay (alimentés par le service via setAutoplayConfig)
+    private var autoplayMode: String = "off"
+    private var lastfmApiKey: String = ""
+    private var autoplayLoading = false
+
+    fun setAutoplayConfig(mode: String, apiKey: String) {
+        autoplayMode = mode
+        lastfmApiKey = apiKey
+    }
+
     // Mapping : position dans la playlist Media3 -> index réel dans queue.tracks
     private val windowIndices = mutableListOf<Int>()
     // Garde-fou pour éviter les reconstructions réentrantes
@@ -67,7 +77,10 @@ object PlaybackController {
             onTrackChanged?.invoke(queue.currentTrack())
             onStateChanged?.invoke()
             // Réaligner la fenêtre autour de la nouvelle piste courante
-            scope.launch { rebuildWindow(keepPlaying = true) }
+            scope.launch {
+                rebuildWindow(keepPlaying = true)
+                maybeAutoplay()
+            }
         }
 
         override fun onPlaybackStateChanged(state: Int) {
@@ -254,6 +267,38 @@ object PlaybackController {
                 player.removeMediaItem(last)
                 if (windowIndices.isNotEmpty()) windowIndices.removeAt(windowIndices.size - 1)
             }
+        }
+    }
+
+    /**
+     * Autoplay : si activé et qu'on atteint la fin de la file (aucune piste
+     * suivante), récupère des titres similaires de la piste courante et les
+     * ajoute à la file. Déclenché uniquement en fin de file complète.
+     */
+    private suspend fun maybeAutoplay() {
+        if (autoplayMode == "off" || autoplayLoading) return
+        if (queue.peekNextIndex() != null) return   // pas en fin de file
+        val cur = queue.currentTrack() ?: return
+
+        autoplayLoading = true
+        try {
+            val similar = try {
+                PythonBridge.suggest(autoplayMode, cur.artist, cur.title, lastfmApiKey)
+            } catch (e: Exception) { emptyList() }
+            if (similar.isNotEmpty()) {
+                // Éviter les doublons déjà présents dans la file
+                val known = queue.tracks.map { it.title + "|" + it.artist }.toHashSet()
+                val fresh = similar.filter { (it.title + "|" + it.artist) !in known }
+                if (fresh.isNotEmpty()) {
+                    queue.tracks.addAll(fresh)
+                    queue.appendOrder(fresh.size)
+                    onStateChanged?.invoke()
+                    // compléter la fenêtre pour que la lecture continue
+                    current?.let { ensureNeighbors(it) }
+                }
+            }
+        } finally {
+            autoplayLoading = false
         }
     }
 

@@ -86,6 +86,19 @@
             android:textSize="16sp"
             android:clickable="true"
             android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btnOptions"
+            android:layout_width="44dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn"
+            android:gravity="center"
+            android:text="⚙"
+            android:textColor="@color/text_pri"
+            android:textSize="18sp"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 
     <!-- ── Panneau titre courant ────────────────────────────────── -->

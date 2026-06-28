@@ -47,37 +47,45 @@
             android:inputType="text"
             android:hint="@string/hint_url" />
 
-        <Button
+        <TextView
             android:id="@+id/btnLoad"
-            android:layout_width="wrap_content"
+            android:layout_width="48dp"
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_btn"
+            android:gravity="center"
             android:text="▶"
             android:textColor="@color/text_pri"
             android:textSize="16sp"
-            android:minWidth="48dp" />
+            android:clickable="true"
+            android:focusable="true" />
 
-        <Button
+        <TextView
             android:id="@+id/btnImport"
-            android:layout_width="wrap_content"
+            android:layout_width="44dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/bg_btn"
+            android:gravity="center"
             android:text="+"
-            android:textColor="@color/accent"
-            android:textSize="18sp"
-            android:minWidth="44dp" />
+            android:textColor="@color/text_pri"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
 
-        <Button
+        <TextView
             android:id="@+id/btnPlaylists"
-            android:layout_width="wrap_content"
+            android:layout_width="44dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/bg_btn"
+            android:gravity="center"
             android:text="📋"
-            android:textSize="14sp"
-            android:minWidth="44dp" />
+            android:textColor="@color/text_pri"
+            android:textSize="16sp"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 
     <!-- ── Panneau titre courant ────────────────────────────────── -->
@@ -192,15 +200,17 @@
             android:paddingHorizontal="8dp"
             android:paddingVertical="6dp">
 
-            <Button
+            <TextView
                 android:id="@+id/btnBack"
-                android:layout_width="wrap_content"
+                android:layout_width="44dp"
                 android:layout_height="36dp"
                 android:background="@drawable/bg_btn"
+                android:gravity="center"
                 android:text="←"
                 android:textColor="@color/text_pri"
-                android:textSize="16sp"
-                android:minWidth="44dp" />
+                android:textSize="18sp"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/playlistsTitle"
@@ -213,15 +223,18 @@
                 android:textStyle="bold"
                 android:paddingStart="10dp" />
 
-            <Button
+            <TextView
                 android:id="@+id/btnNewPlaylist"
-                android:layout_width="wrap_content"
+                android:layout_width="44dp"
                 android:layout_height="36dp"
                 android:background="@drawable/bg_btn"
+                android:gravity="center"
                 android:text="+"
-                android:textColor="@color/accent"
-                android:textSize="18sp"
-                android:minWidth="44dp" />
+                android:textColor="@color/text_pri"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView

@@ -8,6 +8,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -45,6 +46,8 @@ object PlaybackController {
 
     var onStateChanged: (() -> Unit)? = null
     var onTrackChanged: ((Track?) -> Unit)? = null
+    /** Messages d'état pour l'UI (résolution, erreurs réseau…). */
+    var onStatus: ((String) -> Unit)? = null
 
     private var initialized = false
 
@@ -74,6 +77,7 @@ object PlaybackController {
             val pos = player.currentMediaItemIndex
             val realIndex = windowIndices.getOrNull(pos) ?: return
             queue.syncTo(realIndex)
+            lastErrorRetryKey = null   // transition OK : réarmer le retry
             onTrackChanged?.invoke(queue.currentTrack())
             onStateChanged?.invoke()
             // Réaligner la fenêtre autour de la nouvelle piste courante
@@ -89,7 +93,25 @@ object PlaybackController {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             onStateChanged?.invoke()
         }
+
+        override fun onPlayerError(error: PlaybackException) {
+            // URL expirée ou flux invalide : on invalide le cache et on
+            // re-résout UNE fois la piste courante (garde anti-boucle).
+            val t = queue.currentTrack() ?: return
+            val key = t.title + "|" + t.artist
+            if (key == lastErrorRetryKey) {
+                onStatus?.invoke("Lecture impossible : " + (error.message ?: "flux invalide"))
+                return
+            }
+            lastErrorRetryKey = key
+            t.streamUrl = null
+            onStatus?.invoke("Flux expiré, nouvelle résolution…")
+            scope.launch { rebuildWindow(keepPlaying = true, startFresh = true) }
+        }
     }
+
+    // Garde anti-boucle du retry sur erreur player (une re-résolution max/piste)
+    private var lastErrorRetryKey: String? = null
 
     fun init(context: Context, castContext: CastContext?) {
         if (initialized) return
@@ -133,7 +155,7 @@ object PlaybackController {
         cur.stop()
         cur.clearMediaItems()
         current = target
-        scope.launch { rebuildWindow(keepPlaying = wasPlaying) }
+        scope.launch { rebuildWindow(keepPlaying = wasPlaying, startFresh = true) }
         onStateChanged?.invoke()
     }
 
@@ -199,45 +221,58 @@ object PlaybackController {
 
         rebuilding = true
         try {
-            val curStream = resolve(cur) ?: run { rebuilding = false; return }
-
-            val items = mutableListOf<MediaItem>()
-            val mapping = mutableListOf<Int>()
-
-            // Précédent (si dispo) -> position 0
-            val prevIdx = queue.peekPrevIndex()
-            var curPos = 0
-            if (prevIdx != null) {
-                val pt = queue.trackAt(prevIdx)
-                val ps = pt?.let { resolve(it) }
-                if (pt != null && ps != null) {
-                    items.add(buildItem(pt, ps)); mapping.add(prevIdx); curPos = 1
-                }
-            }
-
-            // Courant
-            items.add(buildItem(cur, curStream)); mapping.add(queue.currentIndex)
-
-            // Suivant (si dispo)
-            val nextIdx = queue.peekNextIndex()
-            if (nextIdx != null) {
-                val nt = queue.trackAt(nextIdx)
-                val ns = nt?.let { resolve(it) }
-                if (nt != null && ns != null) {
-                    items.add(buildItem(nt, ns)); mapping.add(nextIdx)
-                }
+            // 1) Résoudre et lancer le COURANT tout de suite (démarrage rapide).
+            onStatus?.invoke("Résolution…")
+            val curStream = resolve(cur)
+            if (curStream == null) {
+                // Échec VISIBLE (réseau, yt-dlp, région…) au lieu du silence.
+                onStatus?.invoke("Échec de résolution — vérifie le réseau et réessaie")
+                return
             }
 
             windowIndices.clear()
-            windowIndices.addAll(mapping)
-
-            player.setMediaItems(items, /* startIndex = */ curPos, /* startPositionMs = */ 0)
+            windowIndices.add(queue.currentIndex)
+            player.setMediaItems(listOf(buildItem(cur, curStream)), 0, 0)
             player.prepare()
             player.playWhenReady = keepPlaying
             onTrackChanged?.invoke(cur)
             onStateChanged?.invoke()
+            onStatus?.invoke("")
         } finally {
             rebuilding = false
+        }
+
+        // 2) Compléter prec/suiv en arrière-plan, sans bloquer le son.
+        scope.launch { fillNeighbors() }
+    }
+
+    /** Ajoute précédent (en tête) et suivant (en queue) autour du courant. */
+    private suspend fun fillNeighbors() {
+        val player = current ?: return
+
+        // Suivant d'abord (le plus utile : enchaînement + bouton next voiture)
+        if (!player.hasNextMediaItem()) {
+            val nextIdx = queue.peekNextIndex()
+            if (nextIdx != null) {
+                val nt = queue.trackAt(nextIdx)
+                val ns = nt?.let { resolve(it) }
+                if (nt != null && ns != null && current === player) {
+                    player.addMediaItem(buildItem(nt, ns))
+                    windowIndices.add(nextIdx)
+                }
+            }
+        }
+        // Puis précédent (bouton prev voiture instantané)
+        if (!player.hasPreviousMediaItem()) {
+            val prevIdx = queue.peekPrevIndex()
+            if (prevIdx != null) {
+                val pt = queue.trackAt(prevIdx)
+                val ps = pt?.let { resolve(it) }
+                if (pt != null && ps != null && current === player) {
+                    player.addMediaItem(0, buildItem(pt, ps))
+                    windowIndices.add(0, prevIdx)
+                }
+            }
         }
     }
 

@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
 
         // Branche les callbacks du controller -> rafraîchissement UI
         PlaybackController.onStateChanged = { runOnUiThread { refreshTransport() } }
+        PlaybackController.onStatus = { msg -> runOnUiThread { setStatus(msg) } }
         PlaybackController.onTrackChanged = { track ->
             runOnUiThread {
                 adapter.setCurrent(PlaybackController.queue.currentIndex)
@@ -431,6 +432,7 @@ class MainActivity : AppCompatActivity() {
         ui.removeCallbacksAndMessages(null)
         PlaybackController.onStateChanged = null
         PlaybackController.onTrackChanged = null
+        PlaybackController.onStatus = null
         super.onDestroy()
     }
 }

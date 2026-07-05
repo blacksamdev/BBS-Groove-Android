@@ -3,6 +3,7 @@ package io.github.blacksamdev.groove.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import io.github.blacksamdev.groove.R
@@ -47,7 +48,7 @@ class PlaylistAdapter(
         val row: View = view.findViewById(R.id.plRow)
         val name: TextView = view.findViewById(R.id.plName)
         val count: TextView = view.findViewById(R.id.plCount)
-        val play: TextView = view.findViewById(R.id.plPlay)
-        val delete: TextView = view.findViewById(R.id.plDelete)
+        val play: ImageView = view.findViewById(R.id.plPlay)
+        val delete: ImageView = view.findViewById(R.id.plDelete)
     }
 }

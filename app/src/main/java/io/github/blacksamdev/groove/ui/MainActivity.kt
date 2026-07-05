@@ -149,6 +149,11 @@ class MainActivity : AppCompatActivity() {
     private fun openPlaylistTracks(pl: Playlist) {
         openPlaylist = pl
         binding.playlistsTitle.text = pl.name
+        // Ouvrir une playlist démarre sa lecture, même si un titre joue déjà.
+        if (pl.tracks.isNotEmpty()) {
+            adapter.submit(pl.tracks)
+            PlaybackController.load(pl.tracks)
+        }
         val ta = TrackAdapter(
             mode = TrackAdapter.Mode.REMOVE,
             onClick = { index ->
@@ -384,7 +389,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshTransport() {
-        binding.btnPlay.text = if (PlaybackController.isPlaying) "⏸" else "▶"
+        binding.btnPlay.setImageResource(
+            if (PlaybackController.isPlaying) R.drawable.ic_pause else R.drawable.ic_play
+        )
     }
 
     private fun updateTrackPanel(track: Track) {

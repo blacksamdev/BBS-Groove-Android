@@ -6,124 +6,132 @@
     android:orientation="vertical"
     android:background="@color/bg_main">
 
-    <!-- ── Topbar : logo + Cast ─────────────────────────────────── -->
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <!-- ── Topbar ───────────────────────────────────────────────── -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="@color/bg_panel"
-        app:titleTextColor="@color/text_pri">
+        android:paddingHorizontal="16dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="BBS grOOve"
             android:textColor="@color/text_pri"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-    </androidx.appcompat.widget.Toolbar>
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02" />
 
-    <!-- ── Barre URL / recherche + accès playlists ──────────────── -->
+        <ImageView
+            android:id="@+id/btnPlaylists"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_playlist"
+            android:background="@drawable/ripple_circle"
+            android:contentDescription="Playlists"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <ImageView
+            android:id="@+id/btnOptions"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_settings"
+            android:background="@drawable/ripple_circle"
+            android:contentDescription="Options"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <!-- ── Barre recherche ──────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@color/bg_panel"
-        android:paddingHorizontal="12dp"
-        android:paddingBottom="8dp"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp"
         android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/urlInput"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="44dp"
             android:layout_weight="1"
             android:background="@drawable/bg_input"
-            android:paddingHorizontal="10dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="10dp"
             android:textColor="@color/text_pri"
             android:textColorHint="@color/text_sec"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:imeOptions="actionGo"
             android:inputType="text"
+            android:maxLines="1"
             android:hint="@string/hint_url" />
 
-        <TextView
+        <ImageView
             android:id="@+id/btnLoad"
-            android:layout_width="48dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:layout_marginStart="8dp"
+            android:padding="10dp"
+            android:src="@drawable/ic_play"
             android:background="@drawable/bg_btn"
-            android:gravity="center"
-            android:text="▶"
-            android:textColor="@color/text_pri"
-            android:textSize="16sp"
+            android:contentDescription="Charger"
             android:clickable="true"
             android:focusable="true" />
 
-        <TextView
+        <ImageView
             android:id="@+id/btnImport"
             android:layout_width="44dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="6dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:padding="9dp"
+            android:src="@drawable/ic_add"
             android:background="@drawable/bg_btn"
-            android:gravity="center"
-            android:text="+"
-            android:textColor="@color/text_pri"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/btnPlaylists"
-            android:layout_width="44dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_btn"
-            android:gravity="center"
-            android:text="📋"
-            android:textColor="@color/text_pri"
-            android:textSize="16sp"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <TextView
-            android:id="@+id/btnOptions"
-            android:layout_width="44dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_btn"
-            android:gravity="center"
-            android:text="⚙"
-            android:textColor="@color/text_pri"
-            android:textSize="18sp"
+            android:contentDescription="Importer"
             android:clickable="true"
             android:focusable="true" />
     </LinearLayout>
 
-    <!-- ── Panneau titre courant ────────────────────────────────── -->
+    <!-- ── Now playing : artwork + métadonnées ──────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:background="@color/bg_panel"
-        android:layout_margin="8dp">
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
-        <ImageView
-            android:id="@+id/artwork"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:src="@drawable/artwork_placeholder"
-            android:scaleType="centerCrop"
-            android:contentDescription="artwork" />
+        <androidx.cardview.widget.CardView
+            android:layout_width="104dp"
+            android:layout_height="104dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#000000">
+
+            <ImageView
+                android:id="@+id/artwork"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/artwork_placeholder"
+                android:scaleType="centerCrop"
+                android:contentDescription="Pochette" />
+        </androidx.cardview.widget.CardView>
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="16dp"
             android:gravity="center_vertical">
 
             <TextView
@@ -132,7 +140,7 @@
                 android:layout_height="wrap_content"
                 android:text="—"
                 android:textColor="@color/text_pri"
-                android:textSize="15sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end" />
@@ -143,7 +151,8 @@
                 android:layout_height="wrap_content"
                 android:text=""
                 android:textColor="@color/accent"
-                android:textSize="13sp"
+                android:textSize="14sp"
+                android:layout_marginTop="2dp"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
@@ -154,6 +163,7 @@
                 android:text=""
                 android:textColor="@color/text_sec"
                 android:textSize="12sp"
+                android:layout_marginTop="2dp"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
@@ -162,12 +172,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textColor="@color/accent"
-                android:textSize="11sp" />
+                android:textColor="@color/text_sec"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ══ PANNEAU LECTURE (file) ═══════════════════════════════════ -->
+    <!-- ══ PANNEAU LECTURE ══════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/playbackPanel"
         android:layout_width="match_parent"
@@ -178,23 +191,23 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="  Lecture"
+            android:text="File d'attente"
             android:textColor="@color/text_sec"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:paddingVertical="8dp"
-            android:paddingStart="12dp"
-            android:background="@color/bg_panel" />
+            android:letterSpacing="0.05"
+            android:paddingVertical="10dp"
+            android:paddingHorizontal="16dp" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/queueList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/bg_panel"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:paddingBottom="8dp" />
     </LinearLayout>
 
-    <!-- ══ PANNEAU PLAYLISTS (masqué par défaut) ═══════════════════ -->
+    <!-- ══ PANNEAU PLAYLISTS ════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/playlistsPanel"
         android:layout_width="match_parent"
@@ -203,25 +216,22 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <!-- En-tête : retour + titre + nouvelle playlist -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:background="@color/bg_panel"
             android:gravity="center_vertical"
             android:paddingHorizontal="8dp"
-            android:paddingVertical="6dp">
+            android:paddingVertical="8dp">
 
-            <TextView
+            <ImageView
                 android:id="@+id/btnBack"
-                android:layout_width="44dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_btn"
-                android:gravity="center"
-                android:text="←"
-                android:textColor="@color/text_pri"
-                android:textSize="18sp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_back"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Retour"
                 android:clickable="true"
                 android:focusable="true" />
 
@@ -232,20 +242,18 @@
                 android:layout_weight="1"
                 android:text="Mes playlists grOOve"
                 android:textColor="@color/text_pri"
-                android:textSize="14sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
-                android:paddingStart="10dp" />
+                android:paddingStart="8dp" />
 
-            <TextView
+            <ImageView
                 android:id="@+id/btnNewPlaylist"
-                android:layout_width="44dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_btn"
-                android:gravity="center"
-                android:text="+"
-                android:textColor="@color/text_pri"
-                android:textSize="24sp"
-                android:textStyle="bold"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_add"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Nouvelle playlist"
                 android:clickable="true"
                 android:focusable="true" />
         </LinearLayout>
@@ -254,51 +262,21 @@
             android:id="@+id/playlistsList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/bg_panel"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:paddingBottom="8dp" />
     </LinearLayout>
 
-    <!-- ── Player bar ───────────────────────────────────────────── -->
+    <!-- ══ PLAYER BAR (signature) ═══════════════════════════════════ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@color/bg_panel"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="14dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <TextView android:id="@+id/btnShuffle"
-                android:layout_width="44dp" android:layout_height="40dp"
-                android:text="⇄" android:gravity="center"
-                android:textColor="@color/accent" android:textSize="18sp" />
-
-            <TextView android:id="@+id/btnPrev"
-                android:layout_width="44dp" android:layout_height="40dp"
-                android:text="◀◀" android:gravity="center"
-                android:textColor="@color/text_pri" android:textSize="14sp" />
-
-            <TextView android:id="@+id/btnPlay"
-                android:layout_width="56dp" android:layout_height="40dp"
-                android:text="▶" android:gravity="center"
-                android:textColor="@color/text_pri" android:textSize="20sp" />
-
-            <TextView android:id="@+id/btnNext"
-                android:layout_width="44dp" android:layout_height="40dp"
-                android:text="▶▶" android:gravity="center"
-                android:textColor="@color/text_pri" android:textSize="14sp" />
-
-            <TextView android:id="@+id/btnRepeat"
-                android:layout_width="44dp" android:layout_height="40dp"
-                android:text="↺" android:gravity="center"
-                android:textColor="@color/accent" android:textSize="18sp" />
-        </LinearLayout>
-
+        <!-- Progression -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -306,18 +284,79 @@
             android:gravity="center_vertical">
 
             <TextView android:id="@+id/timeCur"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
+                android:layout_width="44dp" android:layout_height="wrap_content"
+                android:text="0:00" android:textColor="@color/text_sec"
+                android:textSize="11sp" />
 
             <SeekBar android:id="@+id/seekBar"
                 android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_weight="1" android:max="1000"
                 android:progressTint="@color/accent"
-                android:thumbTint="@color/text_pri" />
+                android:thumbTint="@color/accent"
+                android:splitTrack="false" />
 
             <TextView android:id="@+id/timeDur"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="0:00" android:textColor="@color/text_sec" android:textSize="11sp" />
+                android:layout_width="44dp" android:layout_height="wrap_content"
+                android:text="0:00" android:textColor="@color/text_sec"
+                android:textSize="11sp" android:gravity="end" />
+        </LinearLayout>
+
+        <!-- Contrôles -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <ImageView android:id="@+id/btnShuffle"
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="44dp" android:padding="11dp"
+                android:src="@drawable/ic_shuffle"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Aléatoire"
+                android:clickable="true" android:focusable="true" />
+
+            <ImageView android:id="@+id/btnPrev"
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="48dp" android:padding="10dp"
+                android:src="@drawable/ic_prev"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Précédent"
+                android:clickable="true" android:focusable="true" />
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_weight="1.4"
+                android:layout_height="wrap_content"
+                android:gravity="center">
+
+                <ImageView android:id="@+id/btnPlay"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="center"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_play"
+                    android:background="@drawable/bg_play_circle"
+                    android:contentDescription="Lecture / Pause"
+                    android:clickable="true" android:focusable="true" />
+            </FrameLayout>
+
+            <ImageView android:id="@+id/btnNext"
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="48dp" android:padding="10dp"
+                android:src="@drawable/ic_next"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Suivant"
+                android:clickable="true" android:focusable="true" />
+
+            <ImageView android:id="@+id/btnRepeat"
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="44dp" android:padding="11dp"
+                android:src="@drawable/ic_repeat"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Répéter"
+                android:clickable="true" android:focusable="true" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

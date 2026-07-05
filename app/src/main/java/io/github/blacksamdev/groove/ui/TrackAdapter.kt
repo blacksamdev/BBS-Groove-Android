@@ -1,19 +1,27 @@
 package io.github.blacksamdev.groove.ui
 
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.model.Track
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 /**
- * Adapter de liste de titres, utilisé dans deux contextes (mode) :
- *   - ADD    : file de lecture -> bouton "+" pour ajouter le titre à une playlist
- *   - REMOVE : playlist ouverte -> bouton "−" pour retirer le titre de la playlist
- *
- * Le titre courant (mode ADD seulement) est mis en évidence en accent.
+ * Liste de titres à deux niveaux (vignette + titre/artiste + durée + action).
+ * Mode ADD (file) -> "+" ajouter à une playlist.
+ * Mode REMOVE (playlist ouverte) -> "−" retirer de la playlist.
+ * Le titre courant (mode ADD) est mis en évidence en accent.
  */
 class TrackAdapter(
     private val mode: Mode = Mode.ADD,
@@ -25,6 +33,7 @@ class TrackAdapter(
 
     private val items = mutableListOf<Track>()
     private var currentIndex = -1
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun submit(tracks: List<Track>) {
         items.clear()
@@ -47,27 +56,49 @@ class TrackAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val t = items[position]
-        val num = (position + 1).toString().padStart(2, '0')
-        holder.line.text = "  $num.  ${t.artist}  —  ${t.title}"
-
         val accent = 0xFF1DB954.toInt()
         val white  = 0xFFFFFFFF.toInt()
-        holder.line.setTextColor(
-            if (mode == Mode.ADD && position == currentIndex) accent else white
+
+        holder.num.text = (position + 1).toString().padStart(2, '0')
+        holder.title.text = t.title
+        holder.artist.text = t.artist
+        holder.dur.text = if (t.durationMs > 0) t.durationLabel else ""
+
+        val isCurrent = mode == Mode.ADD && position == currentIndex
+        holder.title.setTextColor(if (isCurrent) accent else white)
+
+        holder.action.setImageResource(
+            if (mode == Mode.ADD) R.drawable.ic_add else R.drawable.ic_delete
         )
-
-        // Bouton d'action selon le mode
-        holder.action.text = if (mode == Mode.ADD) "+" else "−"
-        holder.action.setTextColor(if (mode == Mode.ADD) accent else 0xFFFF5555.toInt())
         holder.action.setOnClickListener { onAction(holder.bindingAdapterPosition) }
+        holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
 
-        holder.line.setOnClickListener { onClick(holder.bindingAdapterPosition) }
+        // Vignette artwork (chargement async, léger)
+        holder.art.setImageResource(R.drawable.artwork_placeholder)
+        holder.artJob?.cancel()
+        if (t.artworkUrl.isNotEmpty()) {
+            val url = t.artworkUrl
+            holder.artJob = scope.launch {
+                val bmp = withContext(Dispatchers.IO) {
+                    try { URL(url).openStream().use { BitmapFactory.decodeStream(it) } }
+                    catch (e: Exception) { null }
+                }
+                if (bmp != null && holder.bindingAdapterPosition == position) {
+                    holder.art.setImageBitmap(bmp)
+                }
+            }
+        }
     }
 
     override fun getItemCount() = items.size
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
-        val line: TextView = view.findViewById(R.id.track_line)
-        val action: TextView = view.findViewById(R.id.track_action)
+        val num: TextView = view.findViewById(R.id.track_num)
+        val art: ImageView = view.findViewById(R.id.track_art)
+        val title: TextView = view.findViewById(R.id.track_title)
+        val artist: TextView = view.findViewById(R.id.track_artist)
+        val dur: TextView = view.findViewById(R.id.track_dur)
+        val action: ImageView = view.findViewById(R.id.track_action)
+        var artJob: Job? = null
     }
 }

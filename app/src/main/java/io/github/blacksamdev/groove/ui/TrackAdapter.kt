@@ -1,27 +1,22 @@
 package io.github.blacksamdev.groove.ui
 
-import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.model.Track
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.URL
 
 /**
  * Liste de titres à deux niveaux (vignette + titre/artiste + durée + action).
  * Mode ADD (file) -> "+" ajouter à une playlist.
  * Mode REMOVE (playlist ouverte) -> "−" retirer de la playlist.
- * Le titre courant (mode ADD) est mis en évidence en accent.
+ *
+ * Vignettes chargées via Coil : cache mémoire+disque, annulation automatique
+ * au recyclage de la vue (plus de connexions réseau accumulées).
  */
 class TrackAdapter(
     private val mode: Mode = Mode.ADD,
@@ -33,7 +28,6 @@ class TrackAdapter(
 
     private val items = mutableListOf<Track>()
     private var currentIndex = -1
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun submit(tracks: List<Track>) {
         items.clear()
@@ -73,20 +67,11 @@ class TrackAdapter(
         holder.action.setOnClickListener { onAction(holder.bindingAdapterPosition) }
         holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
 
-        // Vignette artwork (chargement async, léger)
-        holder.art.setImageResource(R.drawable.artwork_placeholder)
-        holder.artJob?.cancel()
-        if (t.artworkUrl.isNotEmpty()) {
-            val url = t.artworkUrl
-            holder.artJob = scope.launch {
-                val bmp = withContext(Dispatchers.IO) {
-                    try { URL(url).openStream().use { BitmapFactory.decodeStream(it) } }
-                    catch (e: Exception) { null }
-                }
-                if (bmp != null && holder.bindingAdapterPosition == position) {
-                    holder.art.setImageBitmap(bmp)
-                }
-            }
+        // Vignette via Coil (annulation auto au recyclage, cache intégré)
+        holder.art.load(t.artworkUrl.ifEmpty { null }) {
+            placeholder(R.drawable.artwork_placeholder)
+            error(R.drawable.artwork_placeholder)
+            crossfade(true)
         }
     }
 
@@ -99,6 +84,5 @@ class TrackAdapter(
         val artist: TextView = view.findViewById(R.id.track_artist)
         val dur: TextView = view.findViewById(R.id.track_dur)
         val action: ImageView = view.findViewById(R.id.track_action)
-        var artJob: Job? = null
     }
 }

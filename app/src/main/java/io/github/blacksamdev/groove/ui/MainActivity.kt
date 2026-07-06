@@ -1,7 +1,6 @@
 package io.github.blacksamdev.groove.ui
 
 import android.content.ComponentName
-import android.graphics.BitmapFactory
 import android.app.AlertDialog
 import android.media.AudioManager
 import android.widget.EditText
@@ -22,6 +21,7 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import coil.load
 import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.databinding.ActivityMainBinding
 import io.github.blacksamdev.groove.model.Playlist
@@ -31,10 +31,7 @@ import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.player.PlaybackController
 import io.github.blacksamdev.groove.player.PlaybackService
 import io.github.blacksamdev.groove.resolver.PythonBridge
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.URL
 
 /**
  * Écran principal — désormais un CLIENT du PlaybackService.
@@ -399,17 +396,10 @@ class MainActivity : AppCompatActivity() {
         binding.trackArtist.text = track.artist
         binding.trackAlbum.text = listOf(track.album, track.durationLabel)
             .filter { it.isNotEmpty() }.joinToString("  ·  ")
-        binding.artwork.setImageResource(R.drawable.artwork_placeholder)
-        if (track.artworkUrl.isNotEmpty()) loadArtwork(track.artworkUrl)
-    }
-
-    private fun loadArtwork(url: String) {
-        lifecycleScope.launch {
-            val bmp = withContext(Dispatchers.IO) {
-                try { URL(url).openStream().use { BitmapFactory.decodeStream(it) } }
-                catch (e: Exception) { null }
-            }
-            if (bmp != null) binding.artwork.setImageBitmap(bmp)
+        binding.artwork.load(track.artworkUrl.ifEmpty { null }) {
+            placeholder(R.drawable.artwork_placeholder)
+            error(R.drawable.artwork_placeholder)
+            crossfade(true)
         }
     }
 

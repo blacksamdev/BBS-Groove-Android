@@ -101,6 +101,9 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.cardview:cardview:1.0.0'
+
+    // Coil : chargement d'images robuste (cache mémoire+disque, annulation auto)
+    implementation 'io.coil-kt:coil:2.7.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.3'
 

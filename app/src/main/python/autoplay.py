@@ -17,6 +17,80 @@ import urllib.parse
 import urllib.request
 
 import yt_dlp
+import re
+
+
+# ── Nettoyage des titres de vidéos YouTube -> (artiste, titre) propres ──
+
+_NOISE_PATTERNS = [
+    r'\(official\s*(music\s*)?video\)',
+    r'\[official\s*(music\s*)?video\]',
+    r'\(official\s*audio\)',
+    r'\[official\s*audio\]',
+    r'\(lyric[s]?\s*video\)',
+    r'\[lyric[s]?\s*video\]',
+    r'\(official\s*lyric[s]?\s*video\)',
+    r'\(audio\)', r'\[audio\]',
+    r'\(visualizer\)', r'\[visualizer\]',
+    r'\(HD\)', r'\[HD\]', r'\(HQ\)', r'\[HQ\]',
+    r'\(4k\)', r'\[4k\]',
+    r'\(remaster(ed)?\s*\d*\)',
+    r'\(explicit\)', r'\[explicit\]',
+    r'official\s*(music\s*)?video',
+    r'lyric[s]?\s*video',
+]
+
+_FEAT_PATTERN = r'\s+\b(feat|ft|featuring)\.?\s+.*$'
+
+
+def _strip_noise(text):
+    """Retire les marqueurs de vidéo YouTube (official video, HD, etc.)."""
+    t = text
+    for pat in _NOISE_PATTERNS:
+        t = re.sub(pat, '', t, flags=re.IGNORECASE)
+    # crochets/parenthèses résiduels vides
+    t = re.sub(r'[\(\[]\s*[\)\]]', '', t)
+    # espaces multiples
+    t = re.sub(r'\s{2,}', ' ', t)
+    return t.strip(' -–—|')
+
+
+def clean_track(artist, title):
+    """
+    Extrait (artiste, titre) propres depuis les métadonnées YouTube.
+    Gère les cas 'ARTISTE - TITRE', l'artiste dupliqué, les feat., le bruit.
+    Retourne (artist_clean, title_clean).
+    """
+    raw_title = _strip_noise(title or '')
+    raw_artist = (artist or '').strip()
+
+    # Cas fréquent : le "titre" contient "Artiste - Titre"
+    art_from_title = None
+    if ' - ' in raw_title:
+        left, right = raw_title.split(' - ', 1)
+        art_from_title = left.strip()
+        song = right.strip()
+    else:
+        song = raw_title
+
+    # Retirer les feat. du titre de chanson
+    song = re.sub(_FEAT_PATTERN, '', song, flags=re.IGNORECASE).strip()
+
+    # Choix de l'artiste : celui extrait du titre s'il existe, sinon le champ artist.
+    # (Le champ 'artist' venant de YouTube est souvent le nom de chaîne, ex.
+    #  "MacklemoreLLC" ou "MacklemoreVEVO" -> on préfère l'artiste du titre.)
+    chosen_artist = art_from_title or raw_artist
+    # Nettoyer suffixes de chaîne courants
+    chosen_artist = re.sub(r'\s*VEVO$', '', chosen_artist, flags=re.IGNORECASE)
+    chosen_artist = re.sub(r'\s*-?\s*Topic$', '', chosen_artist, flags=re.IGNORECASE)
+    chosen_artist = re.sub(_FEAT_PATTERN, '', chosen_artist, flags=re.IGNORECASE).strip()
+
+    # Si l'artiste apparaît en double dans le titre de chanson, le retirer
+    if chosen_artist and song.lower().startswith(chosen_artist.lower()):
+        song = song[len(chosen_artist):].strip(' -–—')
+
+    return (chosen_artist or raw_artist, song or raw_title)
+
 
 
 _YDL_FLAT = {
@@ -86,6 +160,7 @@ def similar_lastfm(artist, title, api_key, limit=15):
     out = []
     if not api_key:
         return out
+    artist, title = clean_track(artist, title)
     params = {
         'method':  'track.getsimilar',
         'artist':  artist,

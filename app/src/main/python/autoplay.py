@@ -199,9 +199,19 @@ def similar_lastfm(artist, title, api_key, limit=15):
 
 
 def suggest(mode, artist, title, api_key="", limit=15):
-    """Dispatch selon le mode d'autoplay ('youtube' | 'lastfm' | autre=off)."""
+    """
+    Dispatch selon le mode d'autoplay ('youtube' | 'lastfm' | autre=off).
+
+    Fallback : en mode 'lastfm', si Last.fm ne renvoie aucun résultat
+    (titre inconnu de sa base, contenu non-musical…), on bascule
+    automatiquement sur la radio YouTube pour ne jamais couper la lecture.
+    """
     if mode == 'youtube':
         return similar_youtube(artist, title, limit)
     if mode == 'lastfm':
-        return similar_lastfm(artist, title, api_key, limit)
+        results = similar_lastfm(artist, title, api_key, limit)
+        if results:
+            return results
+        # Last.fm vide -> filet de secours YouTube
+        return similar_youtube(artist, title, limit)
     return []

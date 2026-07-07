@@ -1,6 +1,7 @@
 package io.github.blacksamdev.groove.player
 
 import android.content.Context
+import android.util.Log
 import android.net.Uri
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
@@ -11,7 +12,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.google.android.gms.cast.framework.CastContext
@@ -90,6 +90,13 @@ object PlaybackController {
 
         override fun onPlaybackStateChanged(state: Int) {
             onStateChanged?.invoke()
+            if (state == Player.STATE_ENDED) {
+                Log.d("BBSGroove", "STATE_ENDED atteint (fin de piste/ file)")
+                // Fin réelle de lecture : si autoplay ON et file épuisée,
+                // aller chercher la suite et relancer. C'est le filet qui
+                // manquait -> le dernier morceau ne meurt plus en silence.
+                scope.launch { onQueueEnded() }
+            }
         }
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             onStateChanged?.invoke()
@@ -121,29 +128,16 @@ object PlaybackController {
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (Linux; Android) BBSGroove/1.0")
             .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(30_000)
-            .setReadTimeoutMs(30_000)
 
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                /* minBufferMs = */ 120_000,
-                /* maxBufferMs = */ 600_000,
-                /* bufferForPlaybackMs = */ 2_500,
-                /* bufferForPlaybackAfterRebufferMs = */ 5_000
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-
         val exo = ExoPlayer.Builder(context.applicationContext)
             .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
             .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
-            .setLoadControl(loadControl)
             .build()
         exo.addListener(playerListener)
         exoPlayer = exo
@@ -324,27 +318,84 @@ object PlaybackController {
      * suivante), récupère des titres similaires de la piste courante et les
      * ajoute à la file. Déclenché uniquement en fin de file complète.
      */
+    /**
+     * Appelé quand on ARRIVE sur le dernier morceau (transition) : précharge
+     * l'autoplay en avance pour que la suite soit prête avant la fin.
+     */
     private suspend fun maybeAutoplay() {
-        if (autoplayMode == "off" || autoplayLoading) return
-        if (queue.peekNextIndex() != null) return   // pas en fin de file
-        val cur = queue.currentTrack() ?: return
+        if (autoplayMode == "off") return
+        if (queue.peekNextIndex() != null) return   // pas encore en fin de file
+        Log.d("BBSGroove", "Fin de file en approche -> préchargement autoplay ($autoplayMode)")
+        fetchAndAppendSimilar(relaunch = false)
+    }
 
+    /**
+     * Appelé sur STATE_ENDED : la lecture s'est arrêtée. Si autoplay ON et
+     * qu'on peut trouver une suite, on l'ajoute ET on relance la lecture.
+     * C'est le filet de sécurité qui empêche le dernier morceau de mourir.
+     */
+    private suspend fun onQueueEnded() {
+        if (autoplayMode == "off") {
+            Log.d("BBSGroove", "STATE_ENDED, autoplay off -> arrêt normal")
+            return
+        }
+        val player = current ?: return
+        // S'il reste un suivant dans la file (déjà ajouté par le préchargement),
+        // on relance simplement dessus.
+        if (queue.peekNextIndex() != null) {
+            Log.d("BBSGroove", "STATE_ENDED mais suivant dispo -> relance")
+            val t = queue.goNext()
+            if (t != null) { onTrackChanged?.invoke(t); rebuildWindow(keepPlaying = true, startFresh = true) }
+            return
+        }
+        // Sinon on va chercher des similaires MAINTENANT et on relance.
+        Log.d("BBSGroove", "STATE_ENDED en fin de file -> autoplay de secours")
+        fetchAndAppendSimilar(relaunch = true)
+    }
+
+    /**
+     * Cœur de l'autoplay : récupère des titres similaires du morceau courant,
+     * les ajoute à la file, et (si relaunch) relance la lecture dessus.
+     * Robuste : gère l'échec réseau, log chaque étape, un seul appel à la fois.
+     */
+    private suspend fun fetchAndAppendSimilar(relaunch: Boolean) {
+        if (autoplayLoading) { Log.d("BBSGroove", "autoplay déjà en cours, skip"); return }
+        val cur = queue.currentTrack() ?: return
         autoplayLoading = true
         try {
+            onStatus?.invoke("Recherche de titres similaires…")
+            Log.d("BBSGroove", "suggest($autoplayMode) pour ${cur.artist} - ${cur.title}")
             val similar = try {
                 PythonBridge.suggest(autoplayMode, cur.artist, cur.title, lastfmApiKey)
-            } catch (e: Exception) { emptyList() }
-            if (similar.isNotEmpty()) {
-                // Éviter les doublons déjà présents dans la file
-                val known = queue.tracks.map { it.title + "|" + it.artist }.toHashSet()
-                val fresh = similar.filter { (it.title + "|" + it.artist) !in known }
-                if (fresh.isNotEmpty()) {
-                    queue.tracks.addAll(fresh)
-                    queue.appendOrder(fresh.size)
-                    onStateChanged?.invoke()
-                    // compléter la fenêtre pour que la lecture continue
-                    current?.let { ensureNeighbors(it) }
-                }
+            } catch (e: Exception) {
+                Log.e("BBSGroove", "suggest a échoué: ${e.message}"); emptyList()
+            }
+            Log.d("BBSGroove", "suggest a renvoyé ${similar.size} titre(s)")
+
+            val known = queue.tracks.map { it.title + "|" + it.artist }.toHashSet()
+            val fresh = similar.filter { (it.title + "|" + it.artist) !in known }
+
+            if (fresh.isEmpty()) {
+                Log.d("BBSGroove", "aucun titre similaire exploitable")
+                onStatus?.invoke("Aucune suggestion trouvée")
+                return
+            }
+
+            val firstNewIndex = queue.tracks.size
+            queue.tracks.addAll(fresh)
+            queue.appendOrder(fresh.size)
+            onStateChanged?.invoke()
+            Log.d("BBSGroove", "${fresh.size} titre(s) ajouté(s) à la file")
+            onStatus?.invoke("")
+
+            if (relaunch) {
+                // Le player était arrêté : on saute au premier nouveau titre et on relance.
+                queue.goTo(firstNewIndex)
+                onTrackChanged?.invoke(queue.currentTrack())
+                rebuildWindow(keepPlaying = true, startFresh = true)
+            } else {
+                // Préchargement : juste compléter la fenêtre Media3 avec le suivant.
+                current?.let { ensureNeighbors(it) }
             }
         } finally {
             autoplayLoading = false

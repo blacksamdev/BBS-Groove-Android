@@ -15,6 +15,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.gms.cast.framework.CastContext
 import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.resolver.PythonBridge
@@ -79,7 +80,7 @@ object PlaybackController {
             val pos = player.currentMediaItemIndex
             val realIndex = windowIndices.getOrNull(pos) ?: return
             queue.syncTo(realIndex)
-            lastErrorRetryKey = null   // transition OK : réarmer le retry
+            errorRetryCount = 0   // transition OK : réarmer le retry
             onTrackChanged?.invoke(queue.currentTrack())
             onStateChanged?.invoke()
             // Réaligner la fenêtre autour de la nouvelle piste courante
@@ -100,27 +101,31 @@ object PlaybackController {
             }
         }
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) errorRetryCount = 0   // la lecture progresse : réarmer
             onStateChanged?.invoke()
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            // URL expirée ou flux invalide : on invalide le cache et on
-            // re-résout UNE fois la piste courante (garde anti-boucle).
+            // URL expirée / connexion NAT tuée / IP CGNAT changée : on invalide
+            // le cache et on re-résout. Jusqu'à 3 tentatives par piste (les
+            // erreurs réseau mobile sont souvent transitoires), compteur réarmé
+            // dès que la lecture progresse.
             val t = queue.currentTrack() ?: return
-            val key = t.title + "|" + t.artist
-            if (key == lastErrorRetryKey) {
+            if (errorRetryCount >= 3) {
+                Log.e("BBSGroove", "Abandon après 3 re-résolutions: ${error.message}")
                 onStatus?.invoke("Lecture impossible : " + (error.message ?: "flux invalide"))
                 return
             }
-            lastErrorRetryKey = key
+            errorRetryCount++
+            Log.w("BBSGroove", "Erreur player (tentative $errorRetryCount/3): ${error.message}")
             t.streamUrl = null
-            onStatus?.invoke("Flux expiré, nouvelle résolution…")
+            onStatus?.invoke("Connexion perdue, reprise… ($errorRetryCount/3)")
             scope.launch { rebuildWindow(keepPlaying = true, startFresh = true) }
         }
     }
 
-    // Garde anti-boucle du retry sur erreur player (une re-résolution max/piste)
-    private var lastErrorRetryKey: String? = null
+    // Compteur de re-résolutions sur erreur player (réarmé quand ça joue)
+    private var errorRetryCount: Int = 0
 
     fun init(context: Context, castContext: CastContext?) {
         if (initialized) return
@@ -139,18 +144,27 @@ object PlaybackController {
 
         // Buffer très généreux : l'audio est léger, on charge beaucoup
         // d'avance pour absorber les creux de débit 4G (rebuffering).
+        // Buffer MODÉRÉ (leçon 4G) : un buffer énorme fait dormir la connexion
+        // HTTP une fois plein, et le NAT des opérateurs mobiles tue les
+        // connexions inactives -> SocketTimeout à la reprise. Avec ~2 min max,
+        // le téléchargement reste quasi continu et la connexion ne s'endort pas.
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs = */ 180_000,   // 3 min visées en régime normal
-                /* maxBufferMs = */ 900_000,   // jusqu'à 15 min chargées d'avance
-                /* bufferForPlaybackMs = */ 5_000,          // 5 s avant de démarrer
-                /* bufferForPlaybackAfterRebufferMs = */ 10_000  // 10 s avant de reprendre
+                /* minBufferMs = */ 60_000,    // 1 min visée en régime normal
+                /* maxBufferMs = */ 120_000,   // 2 min max d'avance
+                /* bufferForPlaybackMs = */ 2_500,
+                /* bufferForPlaybackAfterRebufferMs = */ 5_000
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
         val exo = ExoPlayer.Builder(context.applicationContext)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(httpFactory)
+                    // 8 tentatives avec backoff avant erreur fatale : les
+                    // timeouts NAT/4G se réparent par simple reconnexion.
+                    .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(8))
+            )
             .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setLoadControl(loadControl)

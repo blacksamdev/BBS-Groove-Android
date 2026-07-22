@@ -29,12 +29,34 @@ class GrooveQueue {
 
     fun currentTrack(): Track? = tracks.getOrNull(currentIndex)
 
+    /**
+     * Active/désactive l'aléatoire SANS perturber la lecture en cours :
+     * la partie déjà jouée et la piste courante gardent leur place ; seuls
+     * les morceaux restants sont réorganisés. Garantit qu'on écoute bien
+     * toute la playlist avant de basculer sur l'autoplay.
+     */
     fun setShuffle(enabled: Boolean) {
-        val cur = currentIndex
         shuffle = enabled
-        rebuildOrder()
-        // Repositionner sur le titre courant dans le nouvel ordre
-        orderPos = order.indexOf(cur).coerceAtLeast(0)
+        if (tracks.isEmpty()) { rebuildOrder(); return }
+
+        if (order.isEmpty() || orderPos !in order.indices) {
+            rebuildOrder()
+            orderPos = order.indexOf(currentIndex).coerceAtLeast(0)
+            return
+        }
+
+        // Historique (jusqu'à la piste courante incluse) : inchangé
+        val head = order.subList(0, orderPos + 1).toMutableList()
+        // Reste à jouer : mélangé si shuffle, remis en ordre naturel sinon
+        val tail = order.subList(orderPos + 1, order.size).toMutableList()
+        if (enabled) {
+            tail.shuffle()
+        } else {
+            tail.sort()
+        }
+
+        order = (head + tail).toMutableList()
+        // orderPos ne bouge pas : la piste courante reste où elle est
     }
 
     private fun rebuildOrder() {

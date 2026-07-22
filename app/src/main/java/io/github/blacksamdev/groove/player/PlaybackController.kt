@@ -468,9 +468,40 @@ object PlaybackController {
         current?.repeatMode = if (enabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
+    /**
+     * Bascule l'aléatoire SANS interrompre la lecture : la piste courante
+     * continue à sa position, on remplace seulement le "suivant" préchargé
+     * (qui n'est plus le bon après remélange).
+     */
     fun setShuffle(enabled: Boolean) {
         queue.setShuffle(enabled)
-        scope.launch { rebuildWindow(keepPlaying = isPlaying, startFresh = true) }
+        scope.launch { refreshUpcoming() }
+    }
+
+    /**
+     * Remplace le morceau suivant dans la fenêtre Media3 sans toucher au
+     * morceau en cours de lecture. Utilisé quand l'ordre change (shuffle).
+     */
+    private suspend fun refreshUpcoming() {
+        val player = current ?: return
+        val curPos = player.currentMediaItemIndex
+
+        // Retirer tout ce qui suit la piste courante dans la playlist Media3
+        while (player.mediaItemCount > curPos + 1) {
+            val last = player.mediaItemCount - 1
+            player.removeMediaItem(last)
+            if (windowIndices.size > last) windowIndices.removeAt(last)
+        }
+
+        // Recharger le nouveau suivant selon l'ordre mis à jour
+        val nextIdx = queue.peekNextIndex() ?: return
+        val nt = queue.trackAt(nextIdx) ?: return
+        val ns = resolve(nt) ?: return
+        if (current === player) {
+            player.addMediaItem(buildItem(nt, ns))
+            windowIndices.add(nextIdx)
+            Log.d("BBSGroove", "Suivant mis à jour après shuffle: ${nt.title}")
+        }
     }
 
     val isPlaying: Boolean get() = current?.isPlaying ?: false

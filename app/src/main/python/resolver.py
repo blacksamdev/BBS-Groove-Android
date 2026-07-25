@@ -14,6 +14,8 @@ bestaudio/best : flux audio direct (googlevideo), pas de muxing, ffmpeg non requ
 
 import yt_dlp
 
+from titleclean import clean_track
+
 
 # Extraction complète : produit une URL de flux média lisible par ExoPlayer
 _YDL_OPTS = {
@@ -134,9 +136,13 @@ def search(query, limit=15):
             page = e.get('webpage_url') or e.get('url') or ''
             vid = e.get('id', '')
             thumb = f"https://img.youtube.com/vi/{vid}/hqdefault.jpg" if vid else ""
+            # Nettoyage cosmétique : titre YouTube brut -> (artiste, titre) propres.
+            # N'affecte que l'affichage ; la lecture utilise page/webpage_url.
+            raw_artist = e.get('channel') or e.get('uploader', '')
+            clean_artist, clean_title = clean_track(raw_artist, e.get('title', ''))
             out.append({
-                'title':       e.get('title', ''),
-                'artist':      e.get('channel') or e.get('uploader', ''),
+                'title':       clean_title,
+                'artist':      clean_artist,
                 'duration_ms': int(dur * 1000),
                 'artwork_url': thumb,
                 'webpage_url': page,

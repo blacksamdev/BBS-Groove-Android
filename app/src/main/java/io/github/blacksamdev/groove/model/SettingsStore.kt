@@ -16,6 +16,8 @@ class SettingsStore(context: Context) {
         private set
     var lastfmApiKey: String = ""
         private set
+    var karaokeMode: String = "compact"   // "compact" | "fullscreen"
+        private set
 
     init { load() }
 
@@ -25,6 +27,7 @@ class SettingsStore(context: Context) {
             val o = JSONObject(file.readText())
             autoplayMode = o.optString("autoplayMode", "off")
             lastfmApiKey = o.optString("lastfmApiKey", "")
+            karaokeMode = o.optString("karaokeMode", "compact")
         } catch (e: Exception) { }
     }
 
@@ -33,10 +36,12 @@ class SettingsStore(context: Context) {
             val o = JSONObject()
             o.put("autoplayMode", autoplayMode)
             o.put("lastfmApiKey", lastfmApiKey)
+            o.put("karaokeMode", karaokeMode)
             file.writeText(o.toString())
         } catch (e: Exception) { }
     }
 
     fun setAutoplayMode(mode: String) { autoplayMode = mode; save() }
     fun setLastfmApiKey(key: String) { lastfmApiKey = key; save() }
+    fun setKaraokeMode(mode: String) { karaokeMode = mode; save() }
 }

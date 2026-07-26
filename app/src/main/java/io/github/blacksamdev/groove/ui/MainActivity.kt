@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Menu
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.session.MediaController
@@ -27,6 +28,8 @@ import io.github.blacksamdev.groove.databinding.ActivityMainBinding
 import io.github.blacksamdev.groove.model.Playlist
 import io.github.blacksamdev.groove.model.PlaylistStore
 import io.github.blacksamdev.groove.model.SettingsStore
+import io.github.blacksamdev.groove.model.LyricLine
+import io.github.blacksamdev.groove.model.Lyrics
 import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.player.PlaybackController
 import io.github.blacksamdev.groove.player.PlaybackService
@@ -50,6 +53,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: PlaylistStore
     private lateinit var settings: SettingsStore
     private var openPlaylist: Playlist? = null
+
+    // ── Karaoké ──
+    private val lyricsCompactAdapter = LyricsAdapter()
+    private val lyricsFullAdapter = LyricsAdapter()
+    private var currentLyrics: Lyrics? = null
+    private var karaokeActive = false
+    private var lyricsFetchToken = 0
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
@@ -76,7 +86,7 @@ class MainActivity : AppCompatActivity() {
         PlaybackController.onTrackChanged = { track ->
             runOnUiThread {
                 adapter.setCurrent(PlaybackController.queue.currentIndex)
-                track?.let { updateTrackPanel(it) }
+                track?.let { updateTrackPanel(it); fetchLyricsFor(it) }
             }
         }
     }
@@ -120,6 +130,11 @@ class MainActivity : AppCompatActivity() {
         )
         binding.playlistsList.layoutManager = LinearLayoutManager(this)
         binding.playlistsList.adapter = playlistAdapter
+
+        binding.karaokeCompact.layoutManager = LinearLayoutManager(this)
+        binding.karaokeCompact.adapter = lyricsCompactAdapter
+        binding.karaokeFullList.layoutManager = LinearLayoutManager(this)
+        binding.karaokeFullList.adapter = lyricsFullAdapter
     }
 
     // ── Bascule panneaux lecture <-> playlists ────────────────────────
@@ -211,6 +226,22 @@ class MainActivity : AppCompatActivity() {
         }
         container.addView(link)
 
+        // ── Affichage du karaoké ──
+        val kLabel = TextView(this).apply {
+            text = "Affichage du karaoké"
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 14f
+            setPadding(0, pad, 0, 0)
+        }
+        container.addView(kLabel)
+
+        val kGroup = RadioGroup(this)
+        val rbCompact = RadioButton(this).apply { text = "Compact (remplace la pochette)"; setTextColor(0xFFFFFFFF.toInt()) }
+        val rbFull    = RadioButton(this).apply { text = "Plein écran"; setTextColor(0xFFFFFFFF.toInt()) }
+        kGroup.addView(rbCompact); kGroup.addView(rbFull)
+        if (settings.karaokeMode == "fullscreen") rbFull.isChecked = true else rbCompact.isChecked = true
+        container.addView(kGroup)
+
         AlertDialog.Builder(this)
             .setTitle("Options")
             .setView(container)
@@ -222,6 +253,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 settings.setAutoplayMode(mode)
                 settings.setLastfmApiKey(keyInput.text.toString().trim())
+                settings.setKaraokeMode(if (kGroup.checkedRadioButtonId == rbFull.id) "fullscreen" else "compact")
                 // Réinjecter dans le moteur de lecture immédiatement
                 PlaybackController.setAutoplayConfig(settings.autoplayMode, settings.lastfmApiKey)
                 setStatus("Options enregistrées")
@@ -312,6 +344,8 @@ class MainActivity : AppCompatActivity() {
         binding.btnLoad.setOnClickListener { loadInput() }
         binding.btnPlaylists.setOnClickListener { showPlaylists() }
         binding.btnOptions.setOnClickListener { showOptions() }
+        binding.btnKaraoke.setOnClickListener { toggleKaraoke() }
+        binding.karaokeFullClose.setOnClickListener { deactivateKaraoke() }
         binding.btnImport.setOnClickListener { promptImport() }
         binding.btnBack.setOnClickListener { if (openPlaylist != null) showPlaylists() else showPlayback() }
         binding.btnNewPlaylist.setOnClickListener { promptNewPlaylist() }
@@ -391,6 +425,77 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    // ── Karaoké ───────────────────────────────────────────────────────
+
+    private fun toggleKaraoke() {
+        if (karaokeActive) deactivateKaraoke() else activateKaraoke()
+    }
+
+    private fun activateKaraoke() {
+        val lyr = currentLyrics
+        // Fallback : pas de paroles synchronisées -> on reste sur pochette+titre
+        if (lyr == null || !lyr.hasSynced) {
+            setStatus("Paroles non disponibles")
+            return
+        }
+        karaokeActive = true
+        binding.btnKaraoke.setColorFilter(0xFF1DB954.toInt())
+        if (settings.karaokeMode == "fullscreen") {
+            binding.karaokeFullTitle.text =
+                PlaybackController.currentTrack()?.let { "${it.artist} — ${it.title}" } ?: ""
+            binding.karaokeFull.visibility = View.VISIBLE
+        } else {
+            binding.nowPlayingPanel.visibility = View.GONE
+            binding.karaokeCompact.visibility = View.VISIBLE
+        }
+    }
+
+    private fun deactivateKaraoke() {
+        karaokeActive = false
+        binding.btnKaraoke.clearColorFilter()
+        binding.karaokeFull.visibility = View.GONE
+        binding.karaokeCompact.visibility = View.GONE
+        binding.nowPlayingPanel.visibility = View.VISIBLE
+    }
+
+    /** Récupère les paroles de la piste (async). Bascule auto si indispo. */
+    private fun fetchLyricsFor(track: Track) {
+        currentLyrics = null
+        lyricsCompactAdapter.submit(emptyList())
+        lyricsFullAdapter.submit(emptyList())
+        val token = ++lyricsFetchToken
+        lifecycleScope.launch {
+            val lyr = try { PythonBridge.fetchLyrics(track) } catch (e: Exception) { null }
+            if (token != lyricsFetchToken) return@launch   // piste changée entre-temps
+            currentLyrics = lyr
+            if (lyr != null && lyr.hasSynced) {
+                lyricsCompactAdapter.submit(lyr.synced)
+                lyricsFullAdapter.submit(lyr.synced)
+            } else if (karaokeActive) {
+                // Karaoké actif mais nouvelle piste sans paroles -> repli
+                deactivateKaraoke()
+                setStatus("Paroles non disponibles")
+            }
+        }
+    }
+
+    /** Appelé par la boucle de progression : surligne la ligne courante. */
+    private fun syncKaraoke(positionMs: Long) {
+        if (!karaokeActive) return
+        val lyr = currentLyrics ?: return
+        if (!lyr.hasSynced) return
+        val posS = positionMs / 1000.0
+        var idx = 0
+        for (i in lyr.synced.indices) {
+            if (lyr.synced[i].time <= posS) idx = i else break
+        }
+        val adapter = if (settings.karaokeMode == "fullscreen") lyricsFullAdapter else lyricsCompactAdapter
+        val list = if (settings.karaokeMode == "fullscreen") binding.karaokeFullList else binding.karaokeCompact
+        if (adapter.setCurrent(idx)) {
+            (list.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(idx, list.height / 3)
+        }
+    }
+
     private fun updateTrackPanel(track: Track) {
         binding.trackTitle.text = track.title
         binding.trackArtist.text = track.artist
@@ -412,6 +517,7 @@ class MainActivity : AppCompatActivity() {
                     if (dur > 0) binding.seekBar.progress = (pos * 1000 / dur).toInt()
                     binding.timeCur.text = fmt(pos)
                     binding.timeDur.text = fmt(dur)
+                    syncKaraoke(pos)
                 }
                 ui.postDelayed(this, 500)
             }
@@ -424,6 +530,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setStatus(msg: String) { binding.status.text = msg }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Le karaoké plein écran se ferme d'abord, au lieu de quitter l'app
+        if (karaokeActive && settings.karaokeMode == "fullscreen") {
+            deactivateKaraoke()
+            return
+        }
+        // Retour depuis le panneau playlists vers la lecture
+        if (binding.playlistsPanel.visibility == View.VISIBLE) {
+            showPlayback()
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
+    }
 
     override fun onDestroy() {
         ui.removeCallbacksAndMessages(null)

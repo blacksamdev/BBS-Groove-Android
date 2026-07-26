@@ -2,6 +2,8 @@ package io.github.blacksamdev.groove.resolver
 
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
+import io.github.blacksamdev.groove.model.LyricLine
+import io.github.blacksamdev.groove.model.Lyrics
 import io.github.blacksamdev.groove.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,6 +82,24 @@ object PythonBridge {
     /** Résout une URL YouTube pérenne -> stream frais. */
     suspend fun resolveFromUrl(ytUrl: String): String? = withContext(Dispatchers.IO) {
         resolverMod.callAttr("resolve_from_url", ytUrl)?.toString()
+    }
+
+    /** Récupère les paroles (lrclib.net) pour une piste. Null si aucune. */
+    suspend fun fetchLyrics(track: Track): Lyrics? = withContext(Dispatchers.IO) {
+        val mod = py.getModule("lyrics")
+        val r = mod.callAttr("fetch", track.artist, track.title, track.durationMs)
+            ?: return@withContext null
+        val m = r.asMap()
+        val hasSynced = m[k("has_synced")]?.toBoolean() ?: false
+        val plain = m[k("plain")]?.toString() ?: ""
+        val syncedList = ArrayList<LyricLine>()
+        m[k("synced")]?.asList()?.forEach { item ->
+            val lm = item.asMap()
+            val t = lm[k("t")]?.toDouble() ?: return@forEach
+            val line = lm[k("line")]?.toString() ?: ""
+            syncedList.add(LyricLine(t, line))
+        }
+        Lyrics(hasSynced, syncedList, plain)
     }
 
     // ── Helpers de conversion ─────────────────────────────────────────

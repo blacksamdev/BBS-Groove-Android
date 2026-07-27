@@ -197,41 +197,49 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ══ KARAOKÉ COMPACT (remplace la zone now playing) ══════════ -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/karaokeCompact"
-        android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:background="@color/bg_main"
-        android:visibility="gone"
-        android:scrollbars="none" />
-
-    <!-- ══ PANNEAU LECTURE ══════════════════════════════════════════ -->
-    <LinearLayout
+    <!-- ══ PANNEAU LECTURE (file OU paroles karaoké) ═══════════════ -->
+    <FrameLayout
         android:id="@+id/playbackPanel"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_weight="1">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="File d'attente"
-            android:textColor="@color/text_sec"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            android:paddingVertical="10dp"
-            android:paddingHorizontal="16dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/queueList"
+        <!-- Contenu file d'attente -->
+        <LinearLayout
+            android:id="@+id/queueContent"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scrollbars="vertical"
-            android:paddingBottom="8dp" />
-    </LinearLayout>
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="File d'attente"
+                android:textColor="@color/text_sec"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:paddingVertical="10dp"
+                android:paddingHorizontal="16dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/queueList"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="vertical"
+                android:paddingBottom="8dp" />
+        </LinearLayout>
+
+        <!-- Paroles karaoké compact (occupe toute la zone liste) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/karaokeCompact"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_main"
+            android:visibility="gone"
+            android:scrollbars="none"
+            android:paddingVertical="24dp" />
+    </FrameLayout>
 
     <!-- ══ PANNEAU PLAYLISTS ════════════════════════════════════════ -->
     <LinearLayout

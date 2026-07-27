@@ -140,6 +140,8 @@ class MainActivity : AppCompatActivity() {
     // ── Bascule panneaux lecture <-> playlists ────────────────────────
 
     private fun showPlaylists() {
+        // Sortir du karaoké compact si actif (on quitte le contexte lecture)
+        if (karaokeActive && settings.karaokeMode != "fullscreen") deactivateKaraoke()
         openPlaylist = null
         binding.playbackPanel.visibility = android.view.View.GONE
         binding.playlistsPanel.visibility = android.view.View.VISIBLE
@@ -445,7 +447,9 @@ class MainActivity : AppCompatActivity() {
                 PlaybackController.currentTrack()?.let { "${it.artist} — ${it.title}" } ?: ""
             binding.karaokeFull.visibility = View.VISIBLE
         } else {
-            binding.nowPlayingPanel.visibility = View.GONE
+            // Compact : les paroles occupent la zone liste ; la pochette et les
+            // détails restent visibles en haut.
+            binding.queueContent.visibility = View.GONE
             binding.karaokeCompact.visibility = View.VISIBLE
         }
     }
@@ -455,6 +459,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnKaraoke.clearColorFilter()
         binding.karaokeFull.visibility = View.GONE
         binding.karaokeCompact.visibility = View.GONE
+        binding.queueContent.visibility = View.VISIBLE
         binding.nowPlayingPanel.visibility = View.VISIBLE
     }
 

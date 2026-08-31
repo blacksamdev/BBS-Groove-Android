@@ -27,7 +27,7 @@ android {
                 // Résolution Spotify (mode requests, sans Selenium) — pur Python
                 install "spotifyscraper"
                 // Extraction du flux audio YouTube
-                install "yt-dlp"
+                install "yt-dlp>=2026.8.19"
             }
         }
     }

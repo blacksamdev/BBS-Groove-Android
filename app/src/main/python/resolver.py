@@ -17,6 +17,11 @@ import yt_dlp
 from titleclean import clean_track
 
 
+# Clients d'extraction YouTube qui servent des URLs sans la restriction 403
+# (les clients mobiles/TV contournent les protections web player_client).
+# Ordre = priorité de repli. À ajuster si YouTube change encore.
+_YT_CLIENTS = ['android_vr', 'android', 'ios', 'tv', 'web']
+
 # Extraction complète : produit une URL de flux média lisible par ExoPlayer
 _YDL_OPTS = {
     'format':       'bestaudio/best',
@@ -24,6 +29,7 @@ _YDL_OPTS = {
     'no_warnings':  True,
     'noplaylist':   True,
     'extract_flat': False,
+    'extractor_args': {'youtube': {'player_client': _YT_CLIENTS}},
 }
 
 # Recherche rapide : ne résout PAS les flux (URLs de page seulement)

@@ -10,12 +10,13 @@ import io.github.blacksamdev.groove.R
 import io.github.blacksamdev.groove.model.Playlist
 
 /**
- * Liste des playlists perso. Chaque ligne : nom + nb de titres + lecture + suppression.
- * Un tap sur la ligne ouvre la playlist (affiche ses titres).
+ * Liste des playlists perso. Chaque ligne : nom + nb de titres + lecture +
+ * partage + suppression. Un tap sur la ligne ouvre la playlist (ses titres).
  */
 class PlaylistAdapter(
     private val onOpen: (Playlist) -> Unit,
     private val onPlay: (Playlist) -> Unit,
+    private val onShare: (Playlist) -> Unit,
     private val onDelete: (Playlist) -> Unit,
 ) : RecyclerView.Adapter<PlaylistAdapter.VH>() {
 
@@ -39,6 +40,7 @@ class PlaylistAdapter(
         holder.count.text = "${p.tracks.size} titre(s)"
         holder.row.setOnClickListener { onOpen(p) }
         holder.play.setOnClickListener { onPlay(p) }
+        holder.share.setOnClickListener { onShare(p) }
         holder.delete.setOnClickListener { onDelete(p) }
     }
 
@@ -49,6 +51,7 @@ class PlaylistAdapter(
         val name: TextView = view.findViewById(R.id.plName)
         val count: TextView = view.findViewById(R.id.plCount)
         val play: ImageView = view.findViewById(R.id.plPlay)
+        val share: ImageView = view.findViewById(R.id.plShare)
         val delete: ImageView = view.findViewById(R.id.plDelete)
     }
 }

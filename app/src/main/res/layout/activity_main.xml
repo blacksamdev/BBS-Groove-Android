@@ -281,6 +281,17 @@
                 android:paddingStart="8dp" />
 
             <ImageView
+                android:id="@+id/btnImportPlaylist"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_import"
+                android:background="@drawable/ripple_circle"
+                android:contentDescription="Importer une playlist"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <ImageView
                 android:id="@+id/btnNewPlaylist"
                 android:layout_width="40dp"
                 android:layout_height="40dp"

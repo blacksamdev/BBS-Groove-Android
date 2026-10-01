@@ -1,6 +1,8 @@
 package io.github.blacksamdev.groove.ui
 
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.app.AlertDialog
 import android.media.AudioManager
 import android.widget.EditText
@@ -13,7 +15,9 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Menu
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -35,6 +39,7 @@ import io.github.blacksamdev.groove.player.PlaybackController
 import io.github.blacksamdev.groove.player.PlaybackService
 import io.github.blacksamdev.groove.resolver.PythonBridge
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Écran principal — désormais un CLIENT du PlaybackService.
@@ -53,6 +58,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: PlaylistStore
     private lateinit var settings: SettingsStore
     private var openPlaylist: Playlist? = null
+
+    // Sélecteur de fichier pour importer une playlist .bbsgroove
+    private val importPlaylistLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let { handleImportUri(it) }
+        }
 
     // ── Karaoké ──
     private val lyricsCompactAdapter = LyricsAdapter()
@@ -126,6 +137,7 @@ class MainActivity : AppCompatActivity() {
         playlistAdapter = PlaylistAdapter(
             onOpen   = { pl -> openPlaylistTracks(pl) },
             onPlay   = { pl -> if (pl.tracks.isNotEmpty()) { adapter.submit(pl.tracks); PlaybackController.load(pl.tracks); showPlayback() } },
+            onShare  = { pl -> sharePlaylist(pl) },
             onDelete = { pl -> store.deletePlaylist(pl.name); refreshPlaylists() },
         )
         binding.playlistsList.layoutManager = LinearLayoutManager(this)
@@ -277,6 +289,98 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // ── Partage / import de playlist (.bbsgroove) ─────────────────────
+
+    /** Exporte une playlist en fichier .bbsgroove et ouvre le partage Android. */
+    private fun sharePlaylist(pl: Playlist) {
+        try {
+            val dir = File(cacheDir, "shared").apply { mkdirs() }
+            val safe = pl.name.replace(Regex("[^a-zA-Z0-9 _-]"), "_").ifBlank { "playlist" }
+            val out = File(dir, "$safe.${PlaylistStore.EXPORT_EXTENSION}")
+            out.writeText(store.exportJson(pl))
+
+            val uri: Uri = FileProvider.getUriForFile(
+                this, "$packageName.fileprovider", out
+            )
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "Playlist grOOve : ${pl.name}")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(send, "Partager « ${pl.name} »"))
+        } catch (e: Exception) {
+            setStatus("Échec du partage : ${e.message}")
+        }
+    }
+
+    /** Ouvre le sélecteur de fichiers pour importer une playlist. */
+    private fun startPlaylistImport() {
+        try {
+            // Extension custom -> type MIME inconnu : on accepte tout, on valide le contenu.
+            importPlaylistLauncher.launch(arrayOf("*/*"))
+        } catch (e: Exception) {
+            setStatus("Impossible d'ouvrir le sélecteur de fichiers")
+        }
+    }
+
+    /** Lit le fichier choisi, parse la playlist, puis gère les conflits de nom. */
+    private fun handleImportUri(uri: Uri) {
+        val text = try {
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        } catch (e: Exception) { null }
+
+        if (text.isNullOrBlank()) { setStatus("Fichier illisible"); return }
+
+        val imported = store.parseImport(text)
+        if (imported == null) {
+            setStatus("Fichier .bbsgroove invalide")
+            return
+        }
+        if (imported.tracks.isEmpty()) {
+            setStatus("Playlist vide — rien à importer")
+            return
+        }
+
+        if (store.hasPlaylist(imported.name)) {
+            resolveImportConflict(imported)
+        } else {
+            store.replacePlaylist(imported.name, imported.tracks)
+            afterImport(imported.name, imported.tracks.size)
+        }
+    }
+
+    /** Nom déjà pris : proposer fusionner / remplacer / renommer. */
+    private fun resolveImportConflict(imported: Playlist) {
+        val options = arrayOf("Fusionner les titres", "Remplacer", "Renommer (garder les deux)")
+        AlertDialog.Builder(this)
+            .setTitle("« ${imported.name} » existe déjà")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        store.addTracks(imported.name, imported.tracks)
+                        afterImport(imported.name, imported.tracks.size)
+                    }
+                    1 -> {
+                        store.replacePlaylist(imported.name, imported.tracks)
+                        afterImport(imported.name, imported.tracks.size)
+                    }
+                    2 -> {
+                        val newName = store.uniqueName(imported.name)
+                        store.replacePlaylist(newName, imported.tracks)
+                        afterImport(newName, imported.tracks.size)
+                    }
+                }
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun afterImport(name: String, count: Int) {
+        refreshPlaylists()
+        setStatus("Importé : « $name » ($count titre(s))")
+    }
+
     /** Ajoute un seul titre (de la file) à une playlist au choix. */
     private fun promptAddTrackToPlaylist(index: Int) {
         val track = PlaybackController.queue.tracks.getOrNull(index) ?: return
@@ -351,6 +455,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setOnClickListener { promptImport() }
         binding.btnBack.setOnClickListener { if (openPlaylist != null) showPlaylists() else showPlayback() }
         binding.btnNewPlaylist.setOnClickListener { promptNewPlaylist() }
+        binding.btnImportPlaylist.setOnClickListener { startPlaylistImport() }
         binding.urlInput.setOnEditorActionListener { _, _, _ -> loadInput(); true }
 
         binding.btnPlay.setOnClickListener { PlaybackController.togglePause() }

@@ -127,11 +127,14 @@ object PlaybackController {
     // Compteur de re-résolutions sur erreur player (réarmé quand ça joue)
     private var errorRetryCount: Int = 0
 
+    // Factory HTTP partagée : on y rejoue les en-têtes yt-dlp du flux courant.
+    private var httpFactory: DefaultHttpDataSource.Factory? = null
+
     fun init(context: Context, castContext: CastContext?) {
         if (initialized) return
         initialized = true
 
-        val httpFactory = DefaultHttpDataSource.Factory()
+        httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (Linux; Android) BBSGroove/1.0")
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(30_000)
@@ -160,7 +163,7 @@ object PlaybackController {
 
         val exo = ExoPlayer.Builder(context.applicationContext)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(httpFactory)
+                DefaultMediaSourceFactory(httpFactory!!)
                     // 8 tentatives avec backoff avant erreur fatale : les
                     // timeouts NAT/4G se réparent par simple reconnexion.
                     .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(8))
@@ -433,10 +436,32 @@ object PlaybackController {
     }
 
     private suspend fun resolve(track: Track): String? {
-        track.streamUrl?.let { return it }
-        val s = try { PythonBridge.resolveStream(track) } catch (e: Exception) { null }
-        if (s != null) track.streamUrl = s
-        return s
+        track.streamUrl?.let {
+            applyStreamHeaders(track)   // réappliquer les en-têtes du flux en cache
+            return it
+        }
+        val info = try { PythonBridge.resolveStream(track) } catch (e: Exception) { null }
+        if (info != null) {
+            track.streamUrl = info.url
+            track.streamHeaders = info.headers
+            applyStreamHeaders(track)
+        }
+        return track.streamUrl
+    }
+
+    /**
+     * Rejoue sur la factory HTTP les en-têtes que yt-dlp a négociés pour ce
+     * flux (User-Agent en tête). setDefaultRequestProperties vaut pour toutes
+     * les requêtes des DataSource créés ensuite -> appliqué juste avant le
+     * chargement du flux. Parade robuste au 403 googlevideo.
+     */
+    private fun applyStreamHeaders(track: Track) {
+        val headers = track.streamHeaders ?: return
+        if (headers.isEmpty()) return
+        val f = httpFactory ?: return
+        headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }
+            ?.let { f.setUserAgent(it.value) }
+        f.setDefaultRequestProperties(headers)
     }
 
     private fun buildItem(track: Track, streamUrl: String): MediaItem =

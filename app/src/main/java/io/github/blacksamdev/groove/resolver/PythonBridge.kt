@@ -47,15 +47,27 @@ object PythonBridge {
     }
 
     /** Résout une Track -> URL de stream audio directe (jouable par ExoPlayer). */
-    suspend fun resolveStream(track: Track): String? = withContext(Dispatchers.IO) {
+    /** Flux résolu : URL directe + en-têtes HTTP à rejouer (anti-403). */
+    data class StreamInfo(val url: String, val headers: Map<String, String>)
+
+    suspend fun resolveStream(track: Track): StreamInfo? = withContext(Dispatchers.IO) {
         // Si on a déjà une URL de page YouTube (issue de search), extraire son flux
         // directement : plus fiable et plus rapide qu'une nouvelle recherche.
         val r = if (track.webpageUrl.isNotEmpty()) {
             resolverMod.callAttr("resolve_from_url", track.webpageUrl)
         } else {
             resolverMod.callAttr("resolve", track.artist, track.title, track.durationMs)
+        } ?: return@withContext null
+
+        val m = r.asMap()
+        val url = m[k("url")]?.toString() ?: return@withContext null
+        val headers = HashMap<String, String>()
+        m[k("headers")]?.asMap()?.forEach { (hk, hv) ->
+            val key = hk?.toString() ?: return@forEach
+            val value = hv?.toString() ?: return@forEach
+            headers[key] = value
         }
-        r?.toString()
+        StreamInfo(url, headers)
     }
 
     /** Candidats (versions) pour un titre. */
@@ -77,11 +89,6 @@ object PythonBridge {
             )
         }
         out
-    }
-
-    /** Résout une URL YouTube pérenne -> stream frais. */
-    suspend fun resolveFromUrl(ytUrl: String): String? = withContext(Dispatchers.IO) {
-        resolverMod.callAttr("resolve_from_url", ytUrl)?.toString()
     }
 
     /** Récupère les paroles (lrclib.net) pour une piste. Null si aucune. */

@@ -14,6 +14,9 @@ data class Track(
     val webpageUrl: String = "",
     // URL de stream résolue (remplie à la volée par le resolver yt-dlp)
     var streamUrl: String? = null,
+    // En-têtes HTTP négociés par yt-dlp pour ce flux, rejoués à la lecture
+    // (parade robuste au 403 googlevideo). Non persisté.
+    var streamHeaders: Map<String, String>? = null,
 ) {
     val durationLabel: String
         get() {

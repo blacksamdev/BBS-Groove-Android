@@ -1,13 +1,17 @@
 """
-resolver.py — Résolution titre -> URL audio YouTube (BBS Groove Android / Chaquopy).
+resolver.py — Résolution titre -> flux audio YouTube (BBS Groove Android / Chaquopy).
 
 Deux niveaux :
   - resolve_candidates() : recherche RAPIDE (extract_flat) -> liste de candidats
                            avec leur URL de PAGE YouTube (pour scoring/versions).
                            Ces URLs ne sont PAS jouables telles quelles.
-  - resolve()            : extraction COMPLÈTE (bestaudio) du meilleur candidat
-                           -> URL de FLUX média directe, jouable par ExoPlayer.
+  - resolve()            : extraction COMPLÈTE (bestaudio) du meilleur candidat.
   - resolve_from_url()   : extraction complète depuis une URL de page YouTube.
+
+Les deux résolutions renvoient un dict {"url": <flux>, "headers": {<en-têtes>}}
+(ou None en cas d'échec). Les en-têtes sont ceux que yt-dlp a négociés pour le
+format choisi (http_headers) : on les rejoue à l'identique sur chaque requête
+de lecture côté ExoPlayer, ce qui est la parade robuste au 403 googlevideo.
 
 bestaudio/best : flux audio direct (googlevideo), pas de muxing, ffmpeg non requis.
 """
@@ -34,24 +38,50 @@ _YDL_FLAT = {
     'extract_flat': True,
 }
 
+# En-têtes à NE PAS rejouer : hop-by-hop ou gérés par le client HTTP lui-même.
+_DROP_HEADERS = {
+    'host', 'content-length', 'connection', 'transfer-encoding',
+    'accept-encoding', 'range', 'te', 'trailer', 'upgrade',
+    'proxy-connection', 'keep-alive',
+}
 
-def _stream_url(entry):
-    """Extrait une URL de FLUX média direct depuis un entry yt-dlp complet."""
+
+def _headers_of(fmt, info):
+    """En-têtes du format choisi (sinon ceux de la vidéo), filtrés."""
+    raw = (fmt or {}).get('http_headers') or (info or {}).get('http_headers') or {}
+    return {
+        k: v for k, v in raw.items()
+        if isinstance(k, str) and isinstance(v, str)
+        and k.lower() not in _DROP_HEADERS
+    }
+
+
+def _pick_format(entry):
+    """Retourne le dict du format audio choisi (ou None)."""
     if not entry:
         return None
-    # 'url' au niveau racine d'un entry complet = flux direct sélectionné
     formats = entry.get('formats', [])
     audio = [f for f in formats
              if f.get('vcodec') == 'none' and f.get('acodec') != 'none' and f.get('url')]
     if audio:
-        # meilleur bitrate audio-only
-        audio.sort(key=lambda f: f.get('abr') or 0)
-        return audio[-1]['url']
+        audio.sort(key=lambda f: f.get('abr') or 0)   # meilleur bitrate audio-only
+        return audio[-1]
     if entry.get('url'):
-        return entry['url']
+        return entry
     if formats and formats[-1].get('url'):
-        return formats[-1]['url']
+        return formats[-1]
     return None
+
+
+def _stream_result(entry):
+    """Depuis un entry yt-dlp complet -> {'url', 'headers'} ou None."""
+    fmt = _pick_format(entry)
+    if not fmt:
+        return None
+    url = fmt.get('url')
+    if not url:
+        return None
+    return {'url': url, 'headers': _headers_of(fmt, entry)}
 
 
 def _page_url(entry):
@@ -96,9 +126,9 @@ def resolve_candidates(artist, title, duration_ms=0):
 
 def resolve(artist, title, duration_ms=0):
     """
-    Résout (artist,title) -> URL de FLUX média jouable.
+    Résout (artist,title) -> {'url', 'headers'} jouable.
     1) recherche rapide du meilleur candidat (page URL)
-    2) extraction complète bestaudio de cette page -> flux direct
+    2) extraction complète bestaudio de cette page -> flux direct + en-têtes
     """
     cands = resolve_candidates(artist, title, duration_ms)
     if not cands:
@@ -107,14 +137,14 @@ def resolve(artist, title, duration_ms=0):
 
 
 def resolve_from_url(yt_url):
-    """Extraction complète d'une URL de page YouTube -> URL de flux média."""
+    """Extraction complète d'une URL de page YouTube -> {'url', 'headers'}."""
     if not yt_url:
         return None
     try:
         with yt_dlp.YoutubeDL(_YDL_OPTS) as ydl:
             info = ydl.extract_info(yt_url, download=False)
             if info:
-                return _stream_url(info)
+                return _stream_result(info)
     except Exception:
         pass
     return None

@@ -22,8 +22,6 @@ class TrackAdapter(
     private val mode: Mode = Mode.ADD,
     private val onClick: (Int) -> Unit,
     private val onAction: (Int) -> Unit = {},
-    private val onMoveUp: (Int) -> Unit = {},
-    private val onMoveDown: (Int) -> Unit = {},
 ) : RecyclerView.Adapter<TrackAdapter.VH>() {
 
     enum class Mode { ADD, REMOVE }
@@ -36,6 +34,16 @@ class TrackAdapter(
         items.addAll(tracks)
         notifyDataSetChanged()
     }
+
+    /** Déplacement visuel pendant un glisser-déposer (swap de proche en proche). */
+    fun moveItem(from: Int, to: Int) {
+        if (from < to) for (i in from until to) java.util.Collections.swap(items, i, i + 1)
+        else for (i in from downTo to + 1) java.util.Collections.swap(items, i, i - 1)
+        notifyItemMoved(from, to)
+    }
+
+    /** Ordre courant de la liste (après glisser-déposer), pour persistance. */
+    fun currentTracks(): List<Track> = items.toList()
 
     fun setCurrent(index: Int) {
         val old = currentIndex
@@ -69,30 +77,6 @@ class TrackAdapter(
         holder.action.setOnClickListener { onAction(holder.bindingAdapterPosition) }
         holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
 
-        // Flèches de réordonnancement : uniquement dans une playlist ouverte.
-        if (mode == Mode.REMOVE) {
-            holder.moveUp.visibility = View.VISIBLE
-            holder.moveDown.visibility = View.VISIBLE
-            // Grisées et inactives aux extrémités.
-            val isFirst = position == 0
-            val isLast = position == items.size - 1
-            holder.moveUp.isEnabled = !isFirst
-            holder.moveUp.alpha = if (isFirst) 0.3f else 1f
-            holder.moveDown.isEnabled = !isLast
-            holder.moveDown.alpha = if (isLast) 0.3f else 1f
-            holder.moveUp.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p > 0) onMoveUp(p)
-            }
-            holder.moveDown.setOnClickListener {
-                val p = holder.bindingAdapterPosition
-                if (p in 0 until items.size - 1) onMoveDown(p)
-            }
-        } else {
-            holder.moveUp.visibility = View.GONE
-            holder.moveDown.visibility = View.GONE
-        }
-
         // Vignette via Coil (annulation auto au recyclage, cache intégré)
         holder.art.load(t.artworkUrl.ifEmpty { null }) {
             placeholder(R.drawable.artwork_placeholder)
@@ -110,7 +94,5 @@ class TrackAdapter(
         val artist: TextView = view.findViewById(R.id.track_artist)
         val dur: TextView = view.findViewById(R.id.track_dur)
         val action: ImageView = view.findViewById(R.id.track_action)
-        val moveUp: ImageView = view.findViewById(R.id.track_move_up)
-        val moveDown: ImageView = view.findViewById(R.id.track_move_down)
     }
 }

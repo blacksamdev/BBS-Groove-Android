@@ -22,6 +22,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settings: SettingsStore
     private var openPlaylist: Playlist? = null
     private var playlistTa: TrackAdapter? = null
+    private var playlistDragHelper: ItemTouchHelper? = null
 
     // Sélecteur de fichier pour importer une playlist .bbsgroove
     private val importPlaylistLauncher =
@@ -159,6 +162,9 @@ class MainActivity : AppCompatActivity() {
         binding.playbackPanel.visibility = android.view.View.GONE
         binding.playlistsPanel.visibility = android.view.View.VISIBLE
         binding.playlistsTitle.text = "Mes playlists grOOve"
+        // Détacher le glisser-déposer : il ne vaut que dans une playlist ouverte.
+        playlistDragHelper?.attachToRecyclerView(null)
+        playlistDragHelper = null
         binding.playlistsList.adapter = playlistAdapter
         refreshPlaylists()
     }
@@ -195,25 +201,47 @@ class MainActivity : AppCompatActivity() {
                 pl.tracks.removeAt(index)
                 openPlaylistTracks(pl)   // recharge la vue de la playlist
             },
-            onMoveUp = { index -> moveTrackInOpenPlaylist(pl, index, index - 1) },
-            onMoveDown = { index -> moveTrackInOpenPlaylist(pl, index, index + 1) },
         )
         playlistTa = ta
         ta.submit(pl.tracks)
         binding.playlistsList.adapter = ta
-    }
 
-    /**
-     * Déplace un titre dans la playlist ouverte et persiste le nouvel ordre.
-     * Rafraîchit la liste sans relancer la lecture en cours : l'ordre modifié
-     * sera pris en compte à la prochaine lecture de la playlist.
-     */
-    private fun moveTrackInOpenPlaylist(pl: Playlist, from: Int, to: Int) {
-        if (from !in pl.tracks.indices || to !in pl.tracks.indices || from == to) return
-        store.moveTrack(pl.name, from, to)
-        val t = pl.tracks.removeAt(from)
-        pl.tracks.add(to, t)
-        playlistTa?.submit(pl.tracks)
+        // Réordonnancement par appui long + glisser (drag & drop).
+        // Un tap joue le titre ; un appui long le saisit pour le déplacer.
+        // Le nouvel ordre est persisté au relâchement, sans relancer la lecture.
+        playlistDragHelper?.attachToRecyclerView(null)
+        val callback = object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+        ) {
+            override fun onMove(
+                rv: RecyclerView,
+                vh: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder,
+            ): Boolean {
+                val from = vh.bindingAdapterPosition
+                val to = target.bindingAdapterPosition
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) return false
+                ta.moveItem(from, to)
+                return true
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {}
+
+            override fun isLongPressDragEnabled() = true
+
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                // Fin du glisser : on fige le nouvel ordre et on le persiste.
+                val newOrder = ta.currentTracks()
+                pl.tracks.clear()
+                pl.tracks.addAll(newOrder)
+                store.replacePlaylist(pl.name, pl.tracks)
+                ta.submit(pl.tracks)   // réaligne les numéros d'index
+            }
+        }
+        playlistDragHelper = ItemTouchHelper(callback).also {
+            it.attachToRecyclerView(binding.playlistsList)
+        }
     }
 
     /** Dialog Options : mode autoplay (off/youtube/lastfm) + clé Last.fm. */

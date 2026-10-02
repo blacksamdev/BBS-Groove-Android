@@ -73,6 +73,34 @@
         android:textColor="@color/text_sec"
         android:textSize="11sp" />
 
+    <!-- Monter (playlist ouverte seulement, sinon GONE) -->
+    <ImageView
+        android:id="@+id/track_move_up"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="2dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_arrow_up"
+        android:background="@drawable/ripple_circle"
+        android:contentDescription="Monter le titre"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <!-- Descendre (playlist ouverte seulement, sinon GONE) -->
+    <ImageView
+        android:id="@+id/track_move_down"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="2dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_arrow_down"
+        android:background="@drawable/ripple_circle"
+        android:contentDescription="Descendre le titre"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
     <!-- Action + / − -->
     <ImageView
         android:id="@+id/track_action"

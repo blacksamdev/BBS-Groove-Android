@@ -133,6 +133,19 @@ class PlaylistStore(context: Context) {
         return all
     }
 
+    /** Déplace un titre de `from` vers `to` dans une playlist, et persiste. */
+    fun moveTrack(name: String, from: Int, to: Int): MutableList<Playlist> {
+        val all = load()
+        all.firstOrNull { it.name == name }?.let {
+            if (from in it.tracks.indices && to in it.tracks.indices && from != to) {
+                val t = it.tracks.removeAt(from)
+                it.tracks.add(to, t)
+            }
+        }
+        save(all)
+        return all
+    }
+
     /** Nom unique dérivé de `base` : "Rock", "Rock (2)", "Rock (3)"… */
     fun uniqueName(base: String): String {
         val existing = load().map { it.name }.toHashSet()

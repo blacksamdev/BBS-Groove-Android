@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: PlaylistStore
     private lateinit var settings: SettingsStore
     private var openPlaylist: Playlist? = null
+    private var playlistTa: TrackAdapter? = null
 
     // Sélecteur de fichier pour importer une playlist .bbsgroove
     private val importPlaylistLauncher =
@@ -194,9 +195,25 @@ class MainActivity : AppCompatActivity() {
                 pl.tracks.removeAt(index)
                 openPlaylistTracks(pl)   // recharge la vue de la playlist
             },
+            onMoveUp = { index -> moveTrackInOpenPlaylist(pl, index, index - 1) },
+            onMoveDown = { index -> moveTrackInOpenPlaylist(pl, index, index + 1) },
         )
+        playlistTa = ta
         ta.submit(pl.tracks)
         binding.playlistsList.adapter = ta
+    }
+
+    /**
+     * Déplace un titre dans la playlist ouverte et persiste le nouvel ordre.
+     * Rafraîchit la liste sans relancer la lecture en cours : l'ordre modifié
+     * sera pris en compte à la prochaine lecture de la playlist.
+     */
+    private fun moveTrackInOpenPlaylist(pl: Playlist, from: Int, to: Int) {
+        if (from !in pl.tracks.indices || to !in pl.tracks.indices || from == to) return
+        store.moveTrack(pl.name, from, to)
+        val t = pl.tracks.removeAt(from)
+        pl.tracks.add(to, t)
+        playlistTa?.submit(pl.tracks)
     }
 
     /** Dialog Options : mode autoplay (off/youtube/lastfm) + clé Last.fm. */

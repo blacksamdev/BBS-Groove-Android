@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.google.android.gms.cast.framework.CastContext
 import io.github.blacksamdev.groove.model.SettingsStore
 import io.github.blacksamdev.groove.ui.MainActivity
 
@@ -26,8 +25,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        val castContext = try { CastContext.getSharedInstance(this) } catch (e: Exception) { null }
-        PlaybackController.init(this, castContext)
+        PlaybackController.init(this)
 
         // Injecter les réglages d'autoplay (mode + clé Last.fm)
         val settings = SettingsStore(this)

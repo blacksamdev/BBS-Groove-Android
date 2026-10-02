@@ -13,7 +13,6 @@ import android.widget.TextView
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Menu
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,8 +23,6 @@ import androidx.media3.session.SessionToken
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.cast.framework.CastButtonFactory
-import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import coil.load
@@ -87,9 +84,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         volumeControlStream = AudioManager.STREAM_MUSIC
-
-        // Pré-initialise CastContext tôt (le service le refera, idempotent)
-        try { CastContext.getSharedInstance(this) } catch (e: Exception) { }
 
         setupList()
         setupControls()
@@ -529,14 +523,6 @@ class MainActivity : AppCompatActivity() {
                 if (dur > 0) PlaybackController.seekTo(dur * sb.progress / 1000)
             }
         })
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main, menu)
-        CastButtonFactory.setUpMediaRouteButton(
-            applicationContext, menu, R.id.media_route_menu_item
-        )
-        return true
     }
 
     // ── Chargement ────────────────────────────────────────────────────

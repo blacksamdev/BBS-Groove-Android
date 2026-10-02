@@ -3,8 +3,6 @@ package io.github.blacksamdev.groove.player
 import android.content.Context
 import android.util.Log
 import android.net.Uri
-import androidx.media3.cast.CastPlayer
-import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -16,7 +14,6 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
-import com.google.android.gms.cast.framework.CastContext
 import io.github.blacksamdev.groove.model.Track
 import io.github.blacksamdev.groove.resolver.PythonBridge
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +39,6 @@ object PlaybackController {
     val queue = GrooveQueue()
 
     private var exoPlayer: ExoPlayer? = null
-    private var castPlayer: CastPlayer? = null
 
     var current: Player? = null
         private set
@@ -130,7 +126,7 @@ object PlaybackController {
     // Factory HTTP partagée : on y rejoue les en-têtes yt-dlp du flux courant.
     private var httpFactory: DefaultHttpDataSource.Factory? = null
 
-    fun init(context: Context, castContext: CastContext?) {
+    fun init(context: Context) {
         if (initialized) return
         initialized = true
 
@@ -175,30 +171,9 @@ object PlaybackController {
         exo.addListener(playerListener)
         exoPlayer = exo
         current = exo
-
-        if (castContext != null) {
-            val cast = CastPlayer(castContext)
-            cast.addListener(playerListener)
-            cast.setSessionAvailabilityListener(object : SessionAvailabilityListener {
-                override fun onCastSessionAvailable() = switchTo(cast)
-                override fun onCastSessionUnavailable() = exoPlayer?.let { switchTo(it) } ?: Unit
-            })
-            castPlayer = cast
-        }
     }
 
     fun sessionPlayer(): Player = exoPlayer!!
-
-    private fun switchTo(target: Player) {
-        val cur = current ?: return
-        if (cur === target) return
-        val wasPlaying = cur.isPlaying
-        cur.stop()
-        cur.clearMediaItems()
-        current = target
-        scope.launch { rebuildWindow(keepPlaying = wasPlaying, startFresh = true) }
-        onStateChanged?.invoke()
-    }
 
     // ── Chargement / navigation ───────────────────────────────────────
 
@@ -538,9 +513,7 @@ object PlaybackController {
 
     fun release() {
         exoPlayer?.release()
-        castPlayer?.release()
         exoPlayer = null
-        castPlayer = null
         current = null
         initialized = false
         windowIndices.clear()

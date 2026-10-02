@@ -89,10 +89,6 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-dash:$media3_version"
     implementation "androidx.media3:media3-ui:$media3_version"
     implementation "androidx.media3:media3-session:$media3_version"
-    implementation "androidx.media3:media3-cast:$media3_version"
-
-    // ─── Chromecast / Cast SDK ────────────────────────────────────────
-    implementation 'com.google.android.gms:play-services-cast-framework:21.4.0'
 
     // ─── AndroidX core ────────────────────────────────────────────────
     implementation 'androidx.core:core-ktx:1.13.1'

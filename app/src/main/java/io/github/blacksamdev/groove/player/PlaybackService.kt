@@ -50,11 +50,10 @@ class PlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // App balayée hors des récentes : si rien ne joue, on arrête le service.
-        val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
-            stopSelf()
-        }
+        // Balayer l'app hors des récentes = la fermer : on arrête la lecture
+        // et le service, ce qui retire la notification média (un seul geste).
+        mediaSession?.player?.pause()
+        stopSelf()
     }
 
     override fun onDestroy() {

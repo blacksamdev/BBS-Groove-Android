@@ -487,6 +487,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupControls() {
         binding.btnLoad.setOnClickListener { loadInput() }
+        binding.btnHome.setOnClickListener { showPlayback() }
         binding.btnPlaylists.setOnClickListener { showPlaylists() }
         binding.btnOptions.setOnClickListener { showOptions() }
         binding.btnKaraoke.setOnClickListener { toggleKaraoke() }
@@ -576,6 +577,10 @@ class MainActivity : AppCompatActivity() {
             setStatus("Paroles non disponibles")
             return
         }
+        // Les paroles s'affichent sur l'écran de lecture : si on est ailleurs
+        // (dans une playlist), on y revient d'abord — plus besoin de passer
+        // manuellement par l'accueil.
+        if (binding.playbackPanel.visibility != View.VISIBLE) showPlayback()
         karaokeActive = true
         binding.btnKaraoke.setColorFilter(0xFF1DB954.toInt())
         if (settings.karaokeMode == "fullscreen") {

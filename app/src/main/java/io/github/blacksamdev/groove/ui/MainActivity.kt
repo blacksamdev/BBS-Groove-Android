@@ -153,6 +153,9 @@ class MainActivity : AppCompatActivity() {
         // Sortir du karaoké compact si actif (on quitte le contexte lecture)
         if (karaokeActive && settings.karaokeMode != "fullscreen") deactivateKaraoke()
         openPlaylist = null
+        // Masquer le bandeau « now playing » libère la hauteur pour la liste —
+        // indispensable en paysage, où sinon le panneau est écrasé à ~0.
+        binding.nowPlayingPanel.visibility = android.view.View.GONE
         binding.playbackPanel.visibility = android.view.View.GONE
         binding.playlistsPanel.visibility = android.view.View.VISIBLE
         binding.playlistsTitle.text = "Mes playlists grOOve"
@@ -165,6 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPlayback() {
         binding.playlistsPanel.visibility = android.view.View.GONE
+        binding.nowPlayingPanel.visibility = android.view.View.VISIBLE
         binding.playbackPanel.visibility = android.view.View.VISIBLE
     }
 

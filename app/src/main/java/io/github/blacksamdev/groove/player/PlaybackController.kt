@@ -344,7 +344,15 @@ object PlaybackController {
      */
     private suspend fun onQueueEnded() {
         if (autoplayMode == "off") {
-            Log.d("BBSGroove", "STATE_ENDED, autoplay off -> arrêt normal")
+            Log.d("BBSGroove", "STATE_ENDED, autoplay off -> arrêt + libération de la notif")
+            // Vider la timeline Media3 fait disparaître la notification média :
+            // sinon la session reste vivante et la dernière piste hante l'écran
+            // verrouillé (il fallait forcer l'arrêt de l'app pour s'en défaire).
+            // La file (GrooveQueue) reste intacte -> l'UI et la relance marchent.
+            current?.pause()
+            current?.clearMediaItems()
+            windowIndices.clear()
+            onStateChanged?.invoke()
             return
         }
         val player = current ?: return
@@ -458,7 +466,13 @@ object PlaybackController {
 
     fun togglePause() {
         val p = current ?: return
-        if (p.isPlaying) p.pause() else p.play()
+        when {
+            p.isPlaying -> p.pause()
+            // Timeline vidée en fin de lecture : on reconstruit avant de relancer.
+            p.mediaItemCount == 0 && !queue.isEmpty() ->
+                scope.launch { rebuildWindow(keepPlaying = true, startFresh = true) }
+            else -> p.play()
+        }
     }
 
     fun setRepeat(enabled: Boolean) {

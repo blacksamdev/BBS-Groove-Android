@@ -57,11 +57,13 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        mediaSession?.run {
-            player.release()
-            release()
-        }
+        // Fermeture du service : libérer la session ET réinitialiser le
+        // PlaybackController. Avant, on relâchait l'ExoPlayer mais le
+        // PlaybackController le croyait toujours « initialisé » -> réouverture
+        // cassée dans le même process, et ses tampons gardaient de la RAM.
+        mediaSession?.release()
         mediaSession = null
+        PlaybackController.release()
         super.onDestroy()
     }
 }
